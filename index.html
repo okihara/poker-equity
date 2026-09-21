@@ -618,13 +618,25 @@ function flash(msg){const w=$('warn');w.textContent=msg;w.hidden=false;setTimeou
 
 let token=0,timer=null;
 function schedule(){clearTimeout(timer);timer=setTimeout(run,180);}
+/* Every field showResult() writes, reset together. Clearing only #eqv and
+   #matchup left the bar, its legend and the confidence interval showing the
+   previous run's numbers next to a –, and left the progress bar switched on
+   when this run superseded one that was still in flight. */
+function clearResult(msg){
+  lastRes=null;
+  $('eqv').textContent='–';$('eqse').textContent='';
+  for(const id of ['segW','segT','segL']){const e=$(id);e.style.width='0';e.textContent='';}
+  $('kw').textContent='–';$('kt').textContent='–';$('kl').textContent='–';
+  $('chips').innerHTML='';$('matchup').innerHTML=msg;
+  $('prog').classList.remove('on');
+  clearHeat();
+}
 async function run(){
   const my=++token;
-  if(hero.length<2){$('eqv').textContent='–';$('matchup').innerHTML='ヒーローの2枚を選んでください。';$('chips').innerHTML='';
-    $('segW').style.width='0';$('segT').style.width='0';$('segL').style.width='0';clearHeat();return;}
+  if(hero.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
   const raw=[];
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=cellW[i][j];if(w>0)for(const c of cellCombos(i,j))raw.push([c[0],c[1],w]);}
-  if(!raw.length){$('eqv').textContent='–';$('matchup').innerHTML='相手のレンジを選んでください。';$('chips').innerHTML='';clearHeat();return;}
+  if(!raw.length){clearResult('相手のレンジを選んでください。');return;}
   $('prog').classList.add('on');$('progi').style.width='0%';
   const res=await computeEquity(hero,board,raw,{mcTotal:precision,
     onProgress:p=>{if(my===token)$('progi').style.width=(p*100).toFixed(0)+'%';},
@@ -632,7 +644,7 @@ async function run(){
   if(my!==token)return;
   $('prog').classList.remove('on');
   if(res.stale)return;
-  if(res.error){flash(res.error);return;}
+  if(res.error){clearResult(res.error);return;}
   lastRes=res;showResult(res);save();
 }
 function showResult(r){
