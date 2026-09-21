@@ -1,0 +1,6 @@
+# Only what `npm run build` reads needs to reach Vercel. The deployment serves
+# public/ alone, so src/ and tools/ are build inputs, not public files.
+test/
+dist/
+README.md
+CLAUDE.md
