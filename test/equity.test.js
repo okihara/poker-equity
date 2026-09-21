@@ -123,3 +123,60 @@ test('exact mode reports no sampling error', async () => {
   assert.strictEqual(r.nBoards, 1081, 'C(47,2) turn-and-river runouts');
   assert.strictEqual(r.perCombo[0].n, 990, 'C(45,2) of them are live for a given combo');
 });
+
+test('reports progress monotonically while enumerating', async () => {
+  const seen = [];
+  const r = await run('AsKs', '', [...cell('AA'), ...cell('KK')], { onProgress: (p) => seen.push(p) });
+  assert.strictEqual(r.mode, 'exact');
+  assert.ok(seen.length > 0, 'a 2.1M-board sweep should report progress at least once');
+  for (let i = 0; i < seen.length; i++) {
+    assert.ok(seen[i] >= 0 && seen[i] <= 1, 'progress outside 0..1: ' + seen[i]);
+    if (i) assert.ok(seen[i] >= seen[i - 1], 'progress went backwards at ' + i);
+  }
+});
+
+test('isStale aborts the sweep instead of finishing it', async () => {
+  let asked = 0;
+  const r = await run('AsKs', '', [...cell('AA'), ...cell('KK')],
+    { isStale: () => { asked++; return true; } });
+  assert.ok(asked > 0, 'a long sweep should ask whether it is still wanted');
+  assert.deepStrictEqual(r, { stale: true }, 'an abandoned run must not report numbers');
+});
+
+const everyCombo = () => {
+  const out = [];
+  for (let a = 0; a < 52; a++) for (let b = a + 1; b < 52; b++) out.push([a, b, 1]);
+  return out;
+};
+
+/* The per-hand heatmap colours one cell per combo, so Monte Carlo spreads its
+   boards evenly instead of sampling combos at random. Plain sampling would
+   leave rare combos with too few boards to colour. */
+test('Monte Carlo gives every surviving combo its own samples', async () => {
+  const r = await run('AcAd', '', everyCombo(), { mcTotal: 4e5 });
+  assert.strictEqual(r.mode, 'mc');
+  assert.strictEqual(r.perCombo.length, r.nCombos, 'the heatmap needs one row per live combo');
+  const n = r.perCombo[0].n;
+  assert.ok(n >= 200, 'the stratified floor is 200 boards per combo, got ' + n);
+  for (const pc of r.perCombo) assert.strictEqual(pc.n, n, 'every combo gets the same board count');
+});
+
+test('the per-combo breakdown reproduces the headline equity', async () => {
+  const mixed = [...cell('99'), ...cell('AA').map((c) => [c[0], c[1], 0.4])];
+  for (const r of [await run('AsKd', 'Qs Js 2h', mixed),
+                   await run('AcAd', '', everyCombo(), { mcTotal: 4e5 })]) {
+    let sum = 0, weight = 0;
+    for (const pc of r.perCombo) { sum += pc.w * pc.eq; weight += pc.w; }
+    assert.ok(Math.abs(sum / weight - r.equity) < 1e-12,
+      r.mode + ': breakdown gives ' + sum / weight + ', headline says ' + r.equity);
+    assert.ok(Math.abs(weight - r.weight) < 1e-12, r.mode + ': reported weight disagrees');
+  }
+});
+
+test('counts the remaining runouts for every board length', async () => {
+  for (const [board, want] of [['Qs Js 2h 7d 3c', 1], ['Qs Js 2h 7d', 46], ['Qs Js 2h', 1081]]) {
+    const r = await run('AsKd', board, cell('99'));
+    assert.strictEqual(r.nBoards, want, board + ' should leave ' + want + ' runouts');
+  }
+  assert.strictEqual((await run('AsKd', '', cell('99'))).nBoards, 2118760, 'C(50,5) preflop');
+});

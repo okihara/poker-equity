@@ -91,3 +91,105 @@ test('agrees with a naive best-of-C(7,5) evaluator on 40k random showdowns', () 
       'disagreed on ' + A.map(cardStr).join('') + ' vs ' + B.map(cardStr).join(''));
   }
 });
+
+test('the lookup tables match an independent spec for all 8192 rank masks', () => {
+  const { STRAIGHT, PACK5, POPC } = loadEngine();
+  for (let m = 0; m < 8192; m++) {
+    /* highest rank that completes five in a row, or 3 for the ace-low wheel */
+    let straight = -1;
+    for (let hi = 12; hi >= 4; hi--) {
+      let run5 = true;
+      for (let d = 0; d < 5; d++) if (!(m & (1 << (hi - d)))) { run5 = false; break; }
+      if (run5) { straight = hi; break; }
+    }
+    if (straight < 0 && (m & 0x1000) && (m & 1) && (m & 2) && (m & 4) && (m & 8)) straight = 3;
+    assert.strictEqual(STRAIGHT[m], straight, 'STRAIGHT[' + m.toString(2) + ']');
+
+    const ranks = [];
+    for (let r = 12; r >= 0; r--) if (m & (1 << r)) ranks.push(r);
+    let packed = 0;
+    for (let i = 0; i < 5; i++) packed = (packed << 4) | (ranks[i] === undefined ? 0 : ranks[i]);
+    assert.strictEqual(PACK5[m], packed, 'PACK5[' + m + ']');
+    assert.strictEqual(POPC[m], ranks.length, 'POPC[' + m + ']');
+  }
+});
+
+/* Deals biased toward the categories a uniform shuffle rarely reaches. */
+function generators(rng) {
+  const pick = (n) => (rng() * n) | 0;
+  const fill = (out, used) => {
+    while (out.length < 7) { const c = pick(52); if (!used.has(c)) { used.add(c); out.push(c); } }
+    return out;
+  };
+  return {
+    uniform: () => fill([], new Set()),
+    /* five to seven cards of one suit: flushes and straight flushes */
+    suited: () => {
+      const suit = pick(4), n = 5 + pick(3);
+      const ranks = Array.from({ length: 13 }, (_, i) => i);
+      for (let s = 0; s < n; s++) { const r = s + pick(13 - s); const t = ranks[s]; ranks[s] = ranks[r]; ranks[r] = t; }
+      const out = ranks.slice(0, n).map((r) => (r << 2) | suit);
+      return fill(out, new Set(out));
+    },
+    /* a five-rank window: straights, quads, boats, three pair */
+    clumped: () => {
+      const lo = pick(9), out = [], used = new Set();
+      while (out.length < 7) {
+        const c = ((lo + pick(Math.min(5, 13 - lo))) << 2) | pick(4);
+        if (!used.has(c)) { used.add(c); out.push(c); }
+      }
+      return out;
+    },
+    /* aces, wheel cards and broadway: the ace-high/ace-low straight corner */
+    wheelish: () => {
+      const pool = [12, 0, 1, 2, 3, 8, 9, 10, 11], out = [], used = new Set();
+      while (out.length < 7) {
+        const c = (pool[pick(pool.length)] << 2) | pick(4);
+        if (!used.has(c)) { used.add(c); out.push(c); }
+      }
+      return out;
+    },
+  };
+}
+
+/* The showdown test above only compares the SIGN for two hands sharing a board,
+   which cannot see an ordering error that happens to fall the same way in every
+   sampled pair. This ranks many hands outright and demands the same order —
+   and the same ties — as the naive evaluator, plus the same category. */
+test('induces the same total ordering as the naive evaluator, ties included', () => {
+  const CAT = 0x100000;
+  const naiveCat = (v) => (v >= 1e9 ? Math.floor(v / 1e9) : 0);
+  for (const [name, gen] of Object.entries(generators(makeRng(0xc0ffee11)))) {
+    const rows = [];
+    for (let i = 0; i < 6000; i++) {
+      const h = gen(), slow = naive7(h), fast = eval7(...h);
+      assert.strictEqual(Math.floor(fast / CAT), naiveCat(slow),
+        name + ': category disagrees on ' + h.map(cardStr).join(' '));
+      rows.push([slow, fast, h]);
+    }
+    rows.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    for (let i = 1; i < rows.length; i++) {
+      const [s0, f0, h0] = rows[i - 1], [s1, f1, h1] = rows[i];
+      const why = name + ': ' + h0.map(cardStr).join(' ') + ' vs ' + h1.map(cardStr).join(' ');
+      if (s0 === s1) assert.strictEqual(f0, f1, why + ' should tie');
+      else assert.ok(f0 < f1, why + ' is ordered the other way');
+    }
+  }
+});
+
+test('picks the best five out of six- and seven-card flushes', () => {
+  assert.strictEqual(ev('As Qs 9s 7s 5s 3s 2h'), ev('As Qs 9s 7s 5s 2s 3h'),
+    'the sixth flush card is not part of the hand');
+  assert.ok(ev('As Qs 9s 7s 5s 3s 2s') > ev('Ks Qs 9s 7s 5s 3s 2s'), 'top five still decide');
+  assert.strictEqual(catOf(ev('5s 4s 3s 2s As 9s Kh')), 8, 'a suited wheel is a straight flush');
+  assert.ok(ev('5s 4s 3s 2s As 9s Kh') < ev('6h 5h 4h 3h 2h Ac Kd'), '5-high loses to 6-high');
+});
+
+test('resolves kickers that only the sixth and seventh card decide', () => {
+  assert.ok(ev('Ac Ad Kc Kd Qh Qs Jc') > ev('Ac Ad Kc Kd Jh Js Th'),
+    'three pair plays the two best pairs, then the best remaining card');
+  assert.strictEqual(ev('Ac Ad Kc Kd Qh Qs 2c'), ev('Ac Ad Kc Kd Qh Qs 3d'),
+    'the seventh card is irrelevant once five are fixed');
+  assert.ok(ev('9c 9d 9h 9s Ac 2d 3h') > ev('9c 9d 9h 9s Kc Qd Jh'), 'quads take one kicker');
+  assert.ok(ev('2c 2d 2h 2s 3c 4d 5h') > ev('Ac Ad Ah Kc Kd Kh Qs'), 'the worst quads beat any boat');
+});

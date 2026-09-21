@@ -12,7 +12,10 @@ const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const EXPORTS = ['eval7', 'makeRng', 'computeEquity', 'cellCombos', 'cellName', 'cellOf',
-  'comboCount', 'cardName', 'RANKS', 'SUITS', 'RANK_ORDER', 'NAME2IJ', 'CELLN'];
+  'comboCount', 'cardName', 'RANKS', 'SUITS', 'RANK_ORDER', 'NAME2IJ', 'CELLN',
+  /* internals, so the tests can check the lookup tables and the category
+     packing directly rather than only through eval7's output */
+  'STRAIGHT', 'PACK5', 'POPC', 'CAT'];
 
 function loadEngine() {
   const src = [
