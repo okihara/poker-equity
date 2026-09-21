@@ -141,7 +141,8 @@ input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
 .segbtns button[aria-pressed=true]{background:var(--opp);color:#fff}
 .tbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--ink-2)}
 .tbtn:hover{border-color:var(--line-2);background:var(--surface-3)}
-.presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.presetlbl{margin-top:12px}
+.presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .note{font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:10px}
 textarea{width:100%;margin-top:8px;min-height:52px;resize:vertical;font-family:var(--ff-num);font-size:11.5px;line-height:1.55;
   padding:8px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)}
@@ -221,7 +222,7 @@ th:first-child,td:first-child{text-align:left}
         <div class="ctl-block">
           <span class="lbl">上位n%で一括選択</span>
           <div class="sliderow">
-            <input type="range" id="topSlider" min="0" max="100" step="0.5" value="15" aria-label="上位何パーセントのハンドを選ぶか">
+            <input type="range" id="topSlider" min="0" max="100" step="0.1" value="15" aria-label="上位何パーセントのハンドを選ぶか">
             <span class="pctout" id="topOut">15.0%</span>
           </div>
         </div>
@@ -243,6 +244,7 @@ th:first-child,td:first-child{text-align:left}
         </div>
       </div>
       <div class="gridwrap"><div class="rgrid" id="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
+      <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
       <div class="presets" id="presets"></div>
       <div class="rowend">
         <button class="tbtn" id="clrRange">レンジをクリア</button>
@@ -578,7 +580,8 @@ function applyText(){
   repaintAll();schedule();
   if(bad)flash(bad+'個のトークンを認識できませんでした。');
 }
-const PRESETS=[['UTG 8%',8],['MP 12%',12],['CO 20%',20],['BTN 35%',35],['SB 45%',45],['コール 15%',15]];
+/* MTT 100bb chipEV opening frequencies. */
+const PRESETS=[['UTG 16.5%',16.5],['MP 22%',22],['CO 36.3%',36.3],['BTN 56%',56],['SB 88%',88]];
 function buildPresets(){
   const p=$('presets');p.innerHTML='';
   for(const [label,pct] of PRESETS){

@@ -169,7 +169,8 @@ function applyText(){
   repaintAll();schedule();
   if(bad)flash(bad+'個のトークンを認識できませんでした。');
 }
-const PRESETS=[['UTG 8%',8],['MP 12%',12],['CO 20%',20],['BTN 35%',35],['SB 45%',45],['コール 15%',15]];
+/* MTT 100bb chipEV opening frequencies. */
+const PRESETS=[['UTG 16.5%',16.5],['MP 22%',22],['CO 36.3%',36.3],['BTN 56%',56],['SB 88%',88]];
 function buildPresets(){
   const p=$('presets');p.innerHTML='';
   for(const [label,pct] of PRESETS){

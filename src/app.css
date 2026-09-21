@@ -137,7 +137,8 @@ input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
 .segbtns button[aria-pressed=true]{background:var(--opp);color:#fff}
 .tbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--ink-2)}
 .tbtn:hover{border-color:var(--line-2);background:var(--surface-3)}
-.presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.presetlbl{margin-top:12px}
+.presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .note{font-size:11px;color:var(--ink-3);line-height:1.6;margin-top:10px}
 textarea{width:100%;margin-top:8px;min-height:52px;resize:vertical;font-family:var(--ff-num);font-size:11.5px;line-height:1.55;
   padding:8px 9px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink)}
