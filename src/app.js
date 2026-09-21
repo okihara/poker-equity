@@ -198,12 +198,12 @@ async function run(){
   const raw=[];
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=cellW[i][j];if(w>0)for(const c of cellCombos(i,j))raw.push([c[0],c[1],w]);}
   if(!raw.length){$('eqv').textContent='–';$('matchup').innerHTML='相手のレンジを選んでください。';$('chips').innerHTML='';clearHeat();return;}
-  $('prog').hidden=false;$('progi').style.width='0%';
+  $('prog').classList.add('on');$('progi').style.width='0%';
   const res=await computeEquity(hero,board,raw,{mcTotal:precision,
     onProgress:p=>{if(my===token)$('progi').style.width=(p*100).toFixed(0)+'%';},
     isStale:()=>my!==token});
   if(my!==token)return;
-  $('prog').hidden=true;
+  $('prog').classList.remove('on');
   if(res.stale)return;
   if(res.error){flash(res.error);return;}
   lastRes=res;showResult(res);save();

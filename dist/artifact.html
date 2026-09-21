@@ -68,16 +68,32 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .bignum .pm{font-size:11px;color:var(--ink-3);margin-left:4px}
 .reslabel{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;font-weight:600}
 .matchup{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin-bottom:10px}
+/* Narrow enough and "hero vs range / board <5 cards>" wraps to a second line.
+   Reserve both lines so a board does not push the panel down: 2 x 19.5px line
+   boxes plus the 8px row gap. */
+@media(max-width:859px){.matchup{min-height:47px;align-content:center}}
 .bar{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--surface-3);gap:2px}
 .bar>div{display:flex;align-items:center;justify-content:center;font-family:var(--ff-num);font-size:10.5px;font-weight:600;color:#fff;min-width:0;overflow:hidden;white-space:nowrap;transition:width .25s ease}
 .seg-w{background:var(--hero)}.seg-t{background:var(--ink-3)}.seg-l{background:var(--opp)}
 .barkey{display:flex;gap:14px;margin-top:7px;font-size:11px;color:var(--ink-2);flex-wrap:wrap}
 .barkey span{display:flex;align-items:center;gap:5px}
 .barkey i{width:9px;height:9px;border-radius:2px;display:block}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.chip{font-size:10.5px;font-family:var(--ff-num);background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);padding:3px 8px;border-radius:99px}
+/* The chip set is always the same three, so the row count is pinned per
+   breakpoint instead of left to flex wrapping — content-dependent wrapping is
+   what tied the panel height to the chip text. A chip box is 22px (10.5px text
+   + 3px padding + 1px border); stacked it is 3x22 + 2x6 gaps = 78px. From 720px
+   up the chips sit in the result band's right column and measure viewport-311px,
+   so the widest possible row (501px) needs 812px; 860px leaves margin for font
+   fallbacks. overflow-x is a safety net that never triggers in practice. */
+.chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin-top:12px;height:22px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+@media(max-width:859px){.chips{flex-direction:column;align-items:flex-start;height:78px;overflow:visible}}
+.chip{flex:none;white-space:nowrap;font-size:10.5px;font-family:var(--ff-num);background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);padding:3px 8px;border-radius:99px}
 .chip.acc{border-color:var(--opp);color:var(--opp);background:var(--opp-soft)}
-.prog{height:3px;background:var(--surface-3);border-radius:2px;overflow:hidden;margin-top:12px}
+/* Always in flow, only toggled with visibility, so starting a recompute does
+   not nudge everything below it down by 15px. */
+.prog{height:3px;background:var(--surface-3);border-radius:2px;overflow:hidden;margin-top:12px;visibility:hidden}
+.prog.on{visibility:visible}
 .prog>i{display:block;height:100%;width:0;background:var(--hero);transition:width .12s linear}
 
 /* ---- cards ---- */
@@ -181,7 +197,7 @@ th:first-child,td:first-child{text-align:left}
           <span><i style="background:var(--opp)"></i>負け <b id="kl" style="font-family:var(--ff-num)">–</b></span>
         </div>
         <div class="chips" id="chips"></div>
-        <div class="prog" id="prog" hidden><i id="progi"></i></div>
+        <div class="prog" id="prog"><i id="progi"></i></div>
       </div>
     </div>
     <div class="warn" id="warn" hidden></div>
@@ -597,12 +613,12 @@ async function run(){
   const raw=[];
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=cellW[i][j];if(w>0)for(const c of cellCombos(i,j))raw.push([c[0],c[1],w]);}
   if(!raw.length){$('eqv').textContent='–';$('matchup').innerHTML='相手のレンジを選んでください。';$('chips').innerHTML='';clearHeat();return;}
-  $('prog').hidden=false;$('progi').style.width='0%';
+  $('prog').classList.add('on');$('progi').style.width='0%';
   const res=await computeEquity(hero,board,raw,{mcTotal:precision,
     onProgress:p=>{if(my===token)$('progi').style.width=(p*100).toFixed(0)+'%';},
     isStale:()=>my!==token});
   if(my!==token)return;
-  $('prog').hidden=true;
+  $('prog').classList.remove('on');
   if(res.stale)return;
   if(res.error){flash(res.error);return;}
   lastRes=res;showResult(res);save();
