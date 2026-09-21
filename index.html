@@ -389,6 +389,11 @@ async function computeEquity(hero,board,rawCombos,opts){
     }
   }else{
     const per=Math.max(200,Math.ceil(MC_TOTAL/nC));
+    /* Yield on work done, not on the combo index. `per` grows as the range
+       shrinks, so a fixed stride of 32 combos meant a 24-combo range ran to
+       completion without once reporting progress, yielding to the page, or
+       asking isStale -- half a second frozen at the high precision setting. */
+    const stride=Math.max(1,Math.ceil(40000/per));
     const rng=makeRng(0x2545f491);const sub=new Int32Array(D);
     for(let ci=0;ci<nC;ci++){
       const c=combos[ci],x=c[0],y=c[1];let m=0;
@@ -401,7 +406,7 @@ async function computeEquity(hero,board,rawCombos,opts){
         if(hv>ov)w++;else if(hv===ov)t++;
       }
       win[ci]=w;tie[ci]=t;cnt[ci]=per;
-      if((ci&31)===31){opts.onProgress&&opts.onProgress(ci/nC);await sleep();if(opts.isStale&&opts.isStale()){stale=true;break;}}
+      if((ci+1)%stride===0){opts.onProgress&&opts.onProgress((ci+1)/nC);await sleep();if(opts.isStale&&opts.isStale()){stale=true;break;}}
     }
   }
   if(stale)return{stale:true};
@@ -528,7 +533,7 @@ function setCell(i,j,w){if(cellW[i][j]!==w){cellW[i][j]=w;paintCell(i,j);}}
 function paintCell(i,j){
   const el=rgrid.children[i*13+j],w=cellW[i][j];
   if(w>0){const c=weightColor(w);el.classList.add('on');el.style.background=toCss(c);el.style.color=inkOn(c);
-    el.textContent=w<1?CELLN[i][j]:CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%';}
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%';}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintAll(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);updateRangeInfo();}
@@ -614,7 +619,11 @@ function render(){
   for(const b of picker.children)b.disabled=dead.has(+b.dataset.c);
 }
 function handStr(cards){return cards.map(c=>'<span class="'+SCLS[c&3]+'" style="font-weight:600">'+RANKS[c>>2]+SYM[c&3]+'</span>').join('');}
-function flash(msg){const w=$('warn');w.textContent=msg;w.hidden=false;setTimeout(()=>{w.hidden=true;},4000);}
+let warnTimer=null;
+/* One timer, restarted on every message: without clearing it the previous
+   call's timeout hid a warning that had only just appeared. */
+function flash(msg){const w=$('warn');w.textContent=msg;w.hidden=false;
+  clearTimeout(warnTimer);warnTimer=setTimeout(()=>{w.hidden=true;},4000);}
 
 let token=0,timer=null;
 function schedule(){clearTimeout(timer);timer=setTimeout(run,180);}

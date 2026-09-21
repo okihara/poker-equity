@@ -180,3 +180,23 @@ test('counts the remaining runouts for every board length', async () => {
   }
   assert.strictEqual((await run('AsKd', '', cell('99'))).nBoards, 2118760, 'C(50,5) preflop');
 });
+
+/* The yield cadence used to be a fixed stride of 32 combos, but the work per
+   combo scales with 1/nCombos, so a range small enough to stay under that
+   stride ran to completion without yielding once. Monte Carlo needs at least
+   15 combos to be chosen at all, which left a 15..31 window that froze the
+   page and could not be cancelled. */
+test('a small Monte Carlo range still reports progress and can be abandoned', async () => {
+  const small = ['AA', 'KK', 'QQ', 'JJ', 'TT'].flatMap((n) => cell(n));
+  const seen = [];
+  const r = await run('AsKs', '', small, { onProgress: (p) => seen.push(p) });
+  assert.strictEqual(r.mode, 'mc');
+  assert.ok(r.nCombos < 32, 'this test is pointless unless it lands in the window, got ' + r.nCombos);
+  assert.ok(seen.length > 0, 'progress must be reported whatever the combo count');
+  for (let i = 1; i < seen.length; i++) assert.ok(seen[i] >= seen[i - 1], 'progress went backwards');
+
+  let asked = 0;
+  const abandoned = await run('AsKs', '', small, { isStale: () => { asked++; return true; } });
+  assert.ok(asked > 0, 'a small range must still be asked whether it is wanted');
+  assert.deepStrictEqual(abandoned, { stale: true });
+});

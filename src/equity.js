@@ -38,6 +38,11 @@ async function computeEquity(hero,board,rawCombos,opts){
     }
   }else{
     const per=Math.max(200,Math.ceil(MC_TOTAL/nC));
+    /* Yield on work done, not on the combo index. `per` grows as the range
+       shrinks, so a fixed stride of 32 combos meant a 24-combo range ran to
+       completion without once reporting progress, yielding to the page, or
+       asking isStale -- half a second frozen at the high precision setting. */
+    const stride=Math.max(1,Math.ceil(40000/per));
     const rng=makeRng(0x2545f491);const sub=new Int32Array(D);
     for(let ci=0;ci<nC;ci++){
       const c=combos[ci],x=c[0],y=c[1];let m=0;
@@ -50,7 +55,7 @@ async function computeEquity(hero,board,rawCombos,opts){
         if(hv>ov)w++;else if(hv===ov)t++;
       }
       win[ci]=w;tie[ci]=t;cnt[ci]=per;
-      if((ci&31)===31){opts.onProgress&&opts.onProgress(ci/nC);await sleep();if(opts.isStale&&opts.isStale()){stale=true;break;}}
+      if((ci+1)%stride===0){opts.onProgress&&opts.onProgress((ci+1)/nC);await sleep();if(opts.isStale&&opts.isStale()){stale=true;break;}}
     }
   }
   if(stale)return{stale:true};

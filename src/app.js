@@ -107,7 +107,7 @@ function setCell(i,j,w){if(cellW[i][j]!==w){cellW[i][j]=w;paintCell(i,j);}}
 function paintCell(i,j){
   const el=rgrid.children[i*13+j],w=cellW[i][j];
   if(w>0){const c=weightColor(w);el.classList.add('on');el.style.background=toCss(c);el.style.color=inkOn(c);
-    el.textContent=w<1?CELLN[i][j]:CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%';}
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%';}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintAll(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);updateRangeInfo();}
@@ -193,7 +193,11 @@ function render(){
   for(const b of picker.children)b.disabled=dead.has(+b.dataset.c);
 }
 function handStr(cards){return cards.map(c=>'<span class="'+SCLS[c&3]+'" style="font-weight:600">'+RANKS[c>>2]+SYM[c&3]+'</span>').join('');}
-function flash(msg){const w=$('warn');w.textContent=msg;w.hidden=false;setTimeout(()=>{w.hidden=true;},4000);}
+let warnTimer=null;
+/* One timer, restarted on every message: without clearing it the previous
+   call's timeout hid a warning that had only just appeared. */
+function flash(msg){const w=$('warn');w.textContent=msg;w.hidden=false;
+  clearTimeout(warnTimer);warnTimer=setTimeout(()=>{w.hidden=true;},4000);}
 
 let token=0,timer=null;
 function schedule(){clearTimeout(timer);timer=setTimeout(run,180);}
