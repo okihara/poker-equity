@@ -580,8 +580,13 @@ function applyText(){
   let bad=0;
   for(let tok of txt.split(/[,\s]+/)){
     tok=tok.trim();if(!tok)continue;
-    const m=tok.split(':');let nm=m[0];
-    nm=nm[0].toUpperCase()+nm[1].toUpperCase()+(nm.length>2?nm[2].toLowerCase():'');
+    const m=tok.split(':'),h=m[0];
+    /* Cell names are 2 or 3 characters. Indexing h[1] without checking threw on
+       a one-character token, and the throw escaped applyText after the weights
+       had already been cleared, so the grid kept painting a range that no
+       longer existed. The upper bound also stops "JJ+" being read as "JJ". */
+    if(h.length<2||h.length>3){bad++;continue;}
+    const nm=h[0].toUpperCase()+h[1].toUpperCase()+(h.length>2?h[2].toLowerCase():'');
     if(!(nm in NAME2IJ)){bad++;continue;}
     let w=m[1]===undefined?1:parseFloat(m[1].replace('%',''))*(m[1].includes('%')?0.01:1);
     if(!(w>0))w=0;if(w>1)w=1;
