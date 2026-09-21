@@ -1,16 +1,7 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ハンドvsレンジ エクイティ</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
-:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0;font:14px system-ui,sans-serif;background:#fafaf9}
-img{max-width:100%}
-[hidden]{display:none!important}
 :root{
   color-scheme: light;
   --bg:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --surface-3:#e9edf1;
@@ -160,8 +151,7 @@ th:first-child,td:first-child{text-align:left}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
 </style>
-</head>
-<body>
+
 <div class="wrap">
   <header class="hd">
     <div>
@@ -710,5 +700,3 @@ activeSlot={kind:'hero',i:hero.length<2?hero.length:0};
 if(hero.length>=2)activeSlot={kind:'board',i:board.length};
 repaintAll();syncText();render();run();
 </script>
-</body>
-</html>

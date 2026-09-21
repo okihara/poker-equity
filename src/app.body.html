@@ -1,0 +1,117 @@
+<div class="wrap">
+  <header class="hd">
+    <div>
+      <div class="eyebrow">No Limit Hold'em · All-in equity</div>
+      <h1>ハンド vs レンジ エクイティ</h1>
+    </div>
+    <p>手札とボードを決めて、相手のレンジを塗る。組み合わせが少なければ全ボードを完全列挙し、多ければモンテカルロで推定します。</p>
+  </header>
+
+  <section class="panel" aria-labelledby="res-h">
+    <h2 id="res-h">計算結果</h2>
+    <div class="res">
+      <div>
+        <div class="reslabel">ヒーローのエクイティ</div>
+        <div class="bignum"><span class="v" id="eqv">–</span><span class="pct">%</span><span class="pm" id="eqse"></span></div>
+      </div>
+      <div>
+        <div class="matchup" id="matchup"></div>
+        <div class="bar" id="bar">
+          <div class="seg-w" id="segW" style="width:0"></div>
+          <div class="seg-t" id="segT" style="width:0"></div>
+          <div class="seg-l" id="segL" style="width:0"></div>
+        </div>
+        <div class="barkey">
+          <span><i style="background:var(--hero)"></i>勝ち <b id="kw" style="font-family:var(--ff-num)">–</b></span>
+          <span><i style="background:var(--ink-3)"></i>引き分け <b id="kt" style="font-family:var(--ff-num)">–</b></span>
+          <span><i style="background:var(--opp)"></i>負け <b id="kl" style="font-family:var(--ff-num)">–</b></span>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="prog" id="prog" hidden><i id="progi"></i></div>
+      </div>
+    </div>
+    <div class="warn" id="warn" hidden></div>
+  </section>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="h-hand">
+      <h2 id="h-hand">ハンドとボード</h2>
+      <div class="slots">
+        <div class="grp">
+          <div class="grphd"><span class="lbl">ヒーロー</span><button class="tbtn" id="clrHero">クリア</button></div>
+          <div class="slotrow" id="heroSlots"></div>
+        </div>
+        <div class="grp">
+          <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
+          <div class="slotrow" id="boardSlots"></div>
+        </div>
+      </div>
+      <div class="lbl" style="margin-bottom:7px">カードを選ぶ</div>
+      <div class="picker" id="picker"></div>
+      <div class="note">枠をクリックしてから下のカードを選びます。埋まると自動で次の枠に進みます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-range">
+      <h2 id="h-range">相手のレンジ</h2>
+      <div class="ctl">
+        <div class="ctl-block">
+          <span class="lbl">上位n%で一括選択</span>
+          <div class="sliderow">
+            <input type="range" id="topSlider" min="0" max="100" step="0.5" value="15" aria-label="上位何パーセントのハンドを選ぶか">
+            <span class="pctout" id="topOut">15.0%</span>
+          </div>
+        </div>
+        <div class="ctl-block">
+          <span class="lbl">塗るウェイト</span>
+          <div class="segbtns" id="wbtns">
+            <button data-w="1" aria-pressed="true">100%</button>
+            <button data-w="0.75" aria-pressed="false">75%</button>
+            <button data-w="0.5" aria-pressed="false">50%</button>
+            <button data-w="0.25" aria-pressed="false">25%</button>
+          </div>
+        </div>
+        <div class="ctl-block">
+          <span class="lbl">精度</span>
+          <div class="segbtns" id="pbtns">
+            <button data-p="1200000" aria-pressed="true">標準</button>
+            <button data-p="6000000" aria-pressed="false">高精度</button>
+          </div>
+        </div>
+      </div>
+      <div class="gridwrap"><div class="rgrid" id="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
+      <div class="presets" id="presets"></div>
+      <div class="rowend">
+        <button class="tbtn" id="clrRange">レンジをクリア</button>
+        <button class="tbtn" id="allRange">全ハンド (100%)</button>
+        <span class="chip" id="rangeInfo">–</span>
+      </div>
+      <textarea id="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
+      <div class="rowend">
+        <button class="tbtn" id="applyText">テキストを適用</button>
+        <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
+      </div>
+      <div class="note">ドラッグで連続選択できます。選択済みのマスから始めると消去になります。「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="h-hm">
+    <div class="hmhead">
+      <div>
+        <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
+        <div class="note" style="margin:0">レンジ内の各ハンドに対するヒーローのエクイティ。マスにポインタを合わせると内訳が出ます。</div>
+      </div>
+      <div class="legend">
+        <div class="legbar" id="legbar"></div>
+        <div class="legticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      </div>
+    </div>
+    <div class="hmgrid"><div class="hm" id="hm"></div></div>
+    <details>
+      <summary>表で見る</summary>
+      <div class="tblwrap"><table id="tbl"><thead><tr><th>ハンド</th><th>エクイティ</th><th>コンボ</th><th>ウェイト</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+
+  <p class="foot">完全列挙モードでは残りボードを全通り数え上げるため誤差はありません。モンテカルロモードの数値には95%信頼区間（±）を併記しています。エクイティはチョップを 1/2 として計算しています。</p>
+</div>
+<div class="tip" id="tip"></div>

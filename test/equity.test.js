@@ -1,0 +1,125 @@
+const test = require('node:test');
+const assert = require('node:assert');
+const { loadEngine, parseCards, cellRange } = require('./harness.js');
+
+const E = loadEngine();
+const run = (hand, board, range, opts) =>
+  E.computeEquity(parseCards(hand), board ? parseCards(board) : [], range, opts || {});
+const cell = (name) => cellRange(E, name);
+const near = (got, want, tol, label) =>
+  assert.ok(Math.abs(got - want) <= tol,
+    label + ': got ' + got.toFixed(4) + '%, expected ' + want + '% (+/-' + tol + ')');
+
+/* Exact enumeration is deterministic, so these are exact to the last digit
+   shown. Spot values cross-checked against the standard published figures for
+   single-combo matchups (AKs vs QQ 46.21%, AKo vs QQ 42.84%, AA vs KK 81.25%);
+   the numbers below are averaged over every combo of the opponent cell, so card
+   removal moves them slightly off the single-combo figures. */
+test('preflop, hand vs a single-cell range (exact enumeration)', async () => {
+  const cases = [
+    ['AsKs', 'QQ', 46.0485],
+    ['AsKh', 'QQ', 43.2423],
+    ['8s8h', 'AKo', 55.1615],
+    ['AcAd', 'KK', 81.9461],
+    ['7h2c', 'AKo', 32.4350],
+    ['AsKs', 'AA', 12.1405],
+    ['5c5d', 'AKs', 51.9656],
+  ];
+  for (const [hand, name, want] of cases) {
+    const r = await run(hand, '', cell(name));
+    assert.strictEqual(r.mode, 'exact', hand + ' vs ' + name + ' should enumerate');
+    near(r.equity * 100, want, 0.0005, hand + ' vs ' + name);
+  }
+});
+
+test('postflop, hand vs a single-cell range (exact enumeration)', async () => {
+  const cases = [
+    ['AsKd', 'Qs Js 2h', '99', 42.0202],
+    ['7c7d', 'Ac Kd 7h', 'AKo', 83.2323],
+    ['AsKs', '2c 7d 9h', 'QQ', 23.9394],
+    ['JhTh', '9s 8c 2d', 'AA', 34.2424],
+    ['AcQc', 'Kc 7c 3d 2s', 'JJ', 32.9545],
+  ];
+  for (const [hand, board, name, want] of cases) {
+    const r = await run(hand, board, cell(name));
+    assert.strictEqual(r.mode, 'exact');
+    near(r.equity * 100, want, 0.0005, hand + ' on ' + board + ' vs ' + name);
+  }
+});
+
+test('a made hand that cannot be caught is 100%, and its mirror is 0%', async () => {
+  const board = '9s 5c 2h Ad Kd';
+  const hero = await run('9h9d', board, cell('AKo'));
+  assert.strictEqual(hero.equity, 1, 'trip nines beat top two pair on a static river');
+  const villain = await run('AcKc', board, [[...parseCards('9h9d'), 1]]);
+  assert.strictEqual(villain.equity, 0);
+});
+
+test('hero equity and villain equity sum to 1', async () => {
+  const board = 'Qs Js 2h';
+  const hero = parseCards('AsKd');
+  const villain = parseCards('9c9d');
+  const a = await run('AsKd', board, [[villain[0], villain[1], 1]]);
+  const b = await run('9c9d', board, [[hero[0], hero[1], 1]]);
+  assert.ok(Math.abs(a.equity + b.equity - 1) < 1e-12, a.equity + ' + ' + b.equity);
+});
+
+test('win + tie + lose = 1', async () => {
+  const r = await run('AsKs', '', cell('QQ'));
+  assert.ok(Math.abs(r.win + r.tie + r.lose - 1) < 1e-12);
+  assert.ok(Math.abs(r.equity - (r.win + r.tie / 2)) < 1e-12, 'chops count as half');
+});
+
+test('combo weights are relative, not absolute', async () => {
+  const full = await run('AsKs', '', cell('QQ'));
+  const halved = await run('AsKs', '', cell('QQ').map((c) => [c[0], c[1], 0.5]));
+  assert.ok(Math.abs(full.equity - halved.equity) < 1e-12);
+});
+
+test('a mixed-weight range lands between its pure components', async () => {
+  const vsAA = (await run('AsKd', '', cell('AA'))).equity;
+  const vs22 = (await run('AsKd', '', cell('22'))).equity;
+  const mixed = (await run('AsKd', '', [...cell('AA'), ...cell('22')])).equity;
+  assert.ok(vsAA < mixed && mixed < vs22, [vsAA, mixed, vs22].join(' / '));
+  const tilted = (await run('AsKd', '',
+    [...cell('AA'), ...cell('22').map((c) => [c[0], c[1], 0.1])])).equity;
+  assert.ok(tilted < mixed, 'down-weighting 22 should move equity toward the AA number');
+});
+
+test('blocked combos are dropped from the range', async () => {
+  const r = await run('AsKs', '', cell('AA'));
+  assert.strictEqual(r.nCombos, 3, 'holding the As leaves 3 AA combos, not 6');
+  const dead = await run('AsAh', '', cell('AA'));
+  assert.strictEqual(dead.nCombos, 1, 'holding two aces leaves exactly one AA combo');
+  assert.strictEqual(dead.equity, 0.5, 'AA vs AA is a coin flip by symmetry');
+  assert.ok(dead.tie > 0.95, 'and almost always a chop, got ' + dead.tie);
+  const impossible = await run('AsAh', '', [[...parseCards('AsAh'), 1]]);
+  assert.ok(impossible.error, 'a range made only of blocked combos is an error');
+});
+
+test('Monte Carlo reproduces the textbook AA-vs-random number', async () => {
+  const everyCombo = [];
+  for (let a = 0; a < 52; a++) for (let b = a + 1; b < 52; b++) everyCombo.push([a, b, 1]);
+  const r = await run('AcAd', '', everyCombo, { mcTotal: 4e6 });
+  assert.strictEqual(r.mode, 'mc', '1225 combos x 2.1M boards is far past the exact budget');
+  near(r.equity * 100, 85.20, 0.06, 'AA vs a random hand');
+  assert.ok(r.se > 0 && r.se * 196 < 0.1, 'reported 95% CI should be under 0.1pt, got ' + r.se * 196);
+});
+
+test('Monte Carlo is seeded, so the same query gives the same answer', async () => {
+  const everyCombo = [];
+  for (let a = 0; a < 52; a++) for (let b = a + 1; b < 52; b++) everyCombo.push([a, b, 1]);
+  const a = await run('7h2c', '', everyCombo, { mcTotal: 4e5 });
+  const b = await run('7h2c', '', everyCombo, { mcTotal: 4e5 });
+  assert.strictEqual(a.equity, b.equity);
+  near(a.equity * 100, 34.57, 0.3, '72o vs a random hand');
+});
+
+test('exact mode reports no sampling error', async () => {
+  const r = await run('AsKd', 'Qs Js 2h', cell('99'));
+  assert.strictEqual(r.se, 0);
+  // 47 unseen cards from hero's point of view: the villain's two are unknown,
+  // so they stay in the deck and are skipped per-combo during the sweep.
+  assert.strictEqual(r.nBoards, 1081, 'C(47,2) turn-and-river runouts');
+  assert.strictEqual(r.perCombo[0].n, 990, 'C(45,2) of them are live for a given combo');
+});
