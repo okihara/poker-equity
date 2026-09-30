@@ -85,7 +85,7 @@ src/
   evaluator.js      7枚ハンド評価器、カード/レンジのユーティリティ
   equity.js         computeEquity(hero, board, combos, opts)
   app.js            UI（グリッド、カード選択、ヒートマップ、配色）
-  app.css           スタイル（ライト/ダーク両対応）
+  app.css           スタイル（ライトテーマのみ）
   app.head.html     <title> とフォント
   app.body.html     マークアップ
   rank-order.json   169ハンドのエクイティ順（tools/build-rank.js が生成）
