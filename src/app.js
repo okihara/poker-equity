@@ -29,16 +29,7 @@ const toCss=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
 function divergeLab(eq){ // eq 0..1, midpoint .5
   const t=Math.max(-1,Math.min(1,(eq-0.5)/0.5));
   const s=Math.sign(t)*Math.pow(Math.abs(t),0.72);
-  return mixLch(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
-/* Interpolated in polar Oklab (L, chroma, hue on the short arc) rather than
-   straight through the a/b plane: a straight line from the amber midpoint to
-   either pole cuts close to grey, which is the washed-out band this avoids.
-   Going round the hue wheel keeps every step saturated (amber→green→blue). */
-function mixLch(A,B,t){
-  const ca=Math.hypot(A[1],A[2]),cb=Math.hypot(B[1],B[2]),ha=Math.atan2(A[2],A[1]);
-  let dh=Math.atan2(B[2],B[1])-ha;if(dh>Math.PI)dh-=2*Math.PI;if(dh<-Math.PI)dh+=2*Math.PI;
-  const c=ca+(cb-ca)*t,h=ha+dh*t;
-  return [A[0]+(B[0]-A[0])*t,c*Math.cos(h),c*Math.sin(h)];}
+  return mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
 const divergeColor=eq=>oklab2rgb(divergeLab(eq));
 const lum=c=>0.2126*s2l(c[0])+0.7152*s2l(c[1])+0.0722*s2l(c[2]);
 const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
