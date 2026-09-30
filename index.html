@@ -18,7 +18,7 @@ img{max-width:100%}
   --ink:#0e1620; --ink-2:#46535f; --ink-3:#77838f;
   --hero:#eb6834; --hero-soft:#fdeee7;
   --opp:#2a78d6; --opp-soft:#e4eefb;
-  --pole-hi:#2a78d6; --pole-lo:#d03b3b; --pole-mid:#eceef1;
+  --pole-hi:#2a78d6; --pole-lo:#d03b3b; --pole-mid:#e3a91f;
   --spade:#0e1620; --heart:#d03b3b; --diamond:#2a78d6; --club:#0ca30c;
   --shadow:0 1px 2px rgba(14,22,32,.06),0 8px 24px -16px rgba(14,22,32,.24);
   --ff-ui:"Archivo","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
@@ -32,7 +32,7 @@ img{max-width:100%}
     --ink:#e6edf4; --ink-2:#a3b1bd; --ink-3:#77848f;
     --hero:#f07a45; --hero-soft:#33200f;
     --opp:#3987e5; --opp-soft:#0f2438;
-    --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#2b333b;
+    --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#c99a2a;
     --spade:#c9d4de; --heart:#e66767; --diamond:#3987e5; --club:#19b419;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
   }
@@ -44,7 +44,7 @@ img{max-width:100%}
   --ink:#e6edf4; --ink-2:#a3b1bd; --ink-3:#77848f;
   --hero:#f07a45; --hero-soft:#33200f;
   --opp:#3987e5; --opp-soft:#0f2438;
-  --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#2b333b;
+  --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#c99a2a;
   --spade:#c9d4de; --heart:#e66767; --diamond:#3987e5; --club:#19b419;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
 }
@@ -453,7 +453,16 @@ const toCss=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
 function divergeLab(eq){ // eq 0..1, midpoint .5
   const t=Math.max(-1,Math.min(1,(eq-0.5)/0.5));
   const s=Math.sign(t)*Math.pow(Math.abs(t),0.72);
-  return mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
+  return mixLch(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
+/* Interpolated in polar Oklab (L, chroma, hue on the short arc) rather than
+   straight through the a/b plane: a straight line from the amber midpoint to
+   either pole cuts close to grey, which is the washed-out band this avoids.
+   Going round the hue wheel keeps every step saturated (amber→green→blue). */
+function mixLch(A,B,t){
+  const ca=Math.hypot(A[1],A[2]),cb=Math.hypot(B[1],B[2]),ha=Math.atan2(A[2],A[1]);
+  let dh=Math.atan2(B[2],B[1])-ha;if(dh>Math.PI)dh-=2*Math.PI;if(dh<-Math.PI)dh+=2*Math.PI;
+  const c=ca+(cb-ca)*t,h=ha+dh*t;
+  return [A[0]+(B[0]-A[0])*t,c*Math.cos(h),c*Math.sin(h)];}
 const divergeColor=eq=>oklab2rgb(divergeLab(eq));
 const lum=c=>0.2126*s2l(c[0])+0.7152*s2l(c[1])+0.0722*s2l(c[2]);
 const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
