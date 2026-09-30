@@ -128,8 +128,7 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
   display:flex;align-items:center;justify-content:center;padding:0;font-size:clamp(7px,calc((100cqw - 24px)/13*.46),18px);
   font-family:var(--ff-num);font-weight:600;letter-spacing:-.02em;transition:background .08s linear}
 .rc.pair{border-color:var(--line-2)}
-.rc.on{color:#fff;border-color:transparent}
-.rc.on.part{border-color:var(--line-2)}
+.rc.on{color:#fff;border-color:var(--ink-2)}
 .hmgrid{container-type:inline-size;max-width:600px}
 .hm{display:grid;grid-template-columns:minmax(0,.6fr) repeat(13,minmax(0,1fr));gap:2px;align-items:center}
 .hl{font-family:var(--ff-num);font-size:clamp(7px,calc((100cqw - 26px)/13.6*.42),16px);color:var(--ink-3);text-align:center;font-weight:600}
@@ -534,11 +533,11 @@ function paintCell(i,j){
      exists) at full strength; weight is the filled height from the bottom,
      so a partial weight never turns into a washed-out tint. */
   if(w>0){const e=cellEq[i][j],c=oklab2rgb(e>=0?divergeLab(e):PAL.opp),h=(w*100).toFixed(1)+'%';
-    el.classList.add('on');el.classList.toggle('part',w<1);
+    el.classList.add('on');
     el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
     el.style.color=w>=0.5?inkOn(c):'var(--ink)';
     el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
-  else{el.classList.remove('on','part');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
+  else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintGrid(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);}
 function repaintAll(){repaintGrid();updateRangeInfo();}

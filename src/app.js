@@ -110,11 +110,11 @@ function paintCell(i,j){
      exists) at full strength; weight is the filled height from the bottom,
      so a partial weight never turns into a washed-out tint. */
   if(w>0){const e=cellEq[i][j],c=oklab2rgb(e>=0?divergeLab(e):PAL.opp),h=(w*100).toFixed(1)+'%';
-    el.classList.add('on');el.classList.toggle('part',w<1);
+    el.classList.add('on');
     el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
     el.style.color=w>=0.5?inkOn(c):'var(--ink)';
     el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
-  else{el.classList.remove('on','part');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
+  else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintGrid(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);}
 function repaintAll(){repaintGrid();updateRangeInfo();}
