@@ -315,10 +315,6 @@ $('clrBoard').addEventListener('click',()=>{board=[];activeSlot={kind:'board',i:
 $('clrRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(0);repaintAll();syncText();schedule();});
 $('allRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(1);repaintAll();syncText();schedule();});
 $('applyText').addEventListener('click',()=>{applyText();syncText();});
-const mq=window.matchMedia('(prefers-color-scheme: dark)');
-mq.addEventListener&&mq.addEventListener('change',()=>{refreshPalette();repaintAll();drawLegend();if(lastRes)drawHeat(lastRes);});
-new MutationObserver(()=>{refreshPalette();repaintAll();drawLegend();if(lastRes)drawHeat(lastRes);})
-  .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 /* ---- boot ---- */
 refreshPalette();buildSlots();buildPicker();buildGrids();buildPresets();drawLegend();

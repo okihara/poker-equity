@@ -64,9 +64,7 @@ npm run rank    # src/rank-order.json を再計算（約40秒、シード固定�
 ## 配色
 
 `src/app.js` に色リテラルを書かない。CSS 変数（`--pole-hi` / `--pole-lo` / `--opp` など）を
-`cssVar()` で読み、Oklab 空間で補間する（`divergeLab` / `divergeColor`）。ライト/ダークは
-`prefers-color-scheme` と `:root[data-theme]` の両方で切り替わり、どちらの変化も MutationObserver /
-matchMedia リスナーが拾って `refreshPalette()` → 再描画する。
+`cssVar()` で読み、Oklab 空間で補間する（`divergeLab` / `divergeColor`）。テーマはライトのみ（ダークモードは持たない）。`refreshPalette()` は起動時に一度だけ呼ばれる。
 
 ## コードスタイル
 

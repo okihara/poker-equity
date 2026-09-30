@@ -24,30 +24,6 @@ img{max-width:100%}
   --ff-ui:"Archivo","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   --ff-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    color-scheme: dark;
-    --bg:#0d1218; --surface:#141b23; --surface-2:#1a232c; --surface-3:#202b35;
-    --line:#252f3a; --line-2:#3a4854;
-    --ink:#e6edf4; --ink-2:#a3b1bd; --ink-3:#77848f;
-    --hero:#f07a45; --hero-soft:#33200f;
-    --opp:#3987e5; --opp-soft:#0f2438;
-    --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#2b333b;
-    --spade:#c9d4de; --heart:#e66767; --diamond:#3987e5; --club:#19b419;
-    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
-  }
-}
-:root[data-theme="dark"]{
-  color-scheme: dark;
-  --bg:#0d1218; --surface:#141b23; --surface-2:#1a232c; --surface-3:#202b35;
-  --line:#252f3a; --line-2:#3a4854;
-  --ink:#e6edf4; --ink-2:#a3b1bd; --ink-3:#77848f;
-  --hero:#f07a45; --hero-soft:#33200f;
-  --opp:#3987e5; --opp-soft:#0f2438;
-  --pole-hi:#3987e5; --pole-lo:#d64a4a; --pole-mid:#2b333b;
-  --spade:#c9d4de; --heart:#e66767; --diamond:#3987e5; --club:#19b419;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px -18px rgba(0,0,0,.8);
-}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff-ui);-webkit-text-size-adjust:100%}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
@@ -738,10 +714,6 @@ $('clrBoard').addEventListener('click',()=>{board=[];activeSlot={kind:'board',i:
 $('clrRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(0);repaintAll();syncText();schedule();});
 $('allRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(1);repaintAll();syncText();schedule();});
 $('applyText').addEventListener('click',()=>{applyText();syncText();});
-const mq=window.matchMedia('(prefers-color-scheme: dark)');
-mq.addEventListener&&mq.addEventListener('change',()=>{refreshPalette();repaintAll();drawLegend();if(lastRes)drawHeat(lastRes);});
-new MutationObserver(()=>{refreshPalette();repaintAll();drawLegend();if(lastRes)drawHeat(lastRes);})
-  .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 /* ---- boot ---- */
 refreshPalette();buildSlots();buildPicker();buildGrids();buildPresets();drawLegend();
