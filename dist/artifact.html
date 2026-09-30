@@ -120,6 +120,7 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
   font-family:var(--ff-num);font-weight:600;letter-spacing:-.02em;transition:background .08s linear}
 .rc.pair{border-color:var(--line-2)}
 .rc.on{color:#fff;border-color:transparent}
+.rc.on.part{border-color:var(--line-2)}
 .hmgrid{container-type:inline-size;max-width:600px}
 .hm{display:grid;grid-template-columns:minmax(0,.6fr) repeat(13,minmax(0,1fr));gap:2px;align-items:center}
 .hl{font-family:var(--ff-num);font-size:clamp(7px,calc((100cqw - 26px)/13.6*.42),16px);color:var(--ink-3);text-align:center;font-weight:600}
@@ -444,10 +445,6 @@ function divergeLab(eq){ // eq 0..1, midpoint .5
   const s=Math.sign(t)*Math.pow(Math.abs(t),0.72);
   return mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
 const divergeColor=eq=>oklab2rgb(divergeLab(eq));
-/* Range cells take the heatmap's equity colour once a result exists, faded
-   toward the surface by weight so partial weights still read as partial.
-   Cells with no result yet (just painted, or fully blocked) keep --opp. */
-function weightColor(w,eq){return oklab2rgb(mix(PAL.surf,eq>=0?divergeLab(eq):PAL.opp,0.18+0.82*w));}
 const lum=c=>0.2126*s2l(c[0])+0.7152*s2l(c[1])+0.0722*s2l(c[2]);
 const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 
@@ -523,9 +520,15 @@ let dragging=false,dragErase=false;
 function setCell(i,j,w){if(cellW[i][j]!==w){cellW[i][j]=w;paintCell(i,j);}}
 function paintCell(i,j){
   const el=rgrid.children[i*13+j],w=cellW[i][j];
-  if(w>0){const e=cellEq[i][j],c=weightColor(w,e);el.classList.add('on');el.style.background=toCss(c);el.style.color=inkOn(c);
+  /* Colour carries equity (the heatmap's scale, or --opp before a result
+     exists) at full strength; weight is the filled height from the bottom,
+     so a partial weight never turns into a washed-out tint. */
+  if(w>0){const e=cellEq[i][j],c=oklab2rgb(e>=0?divergeLab(e):PAL.opp),h=(w*100).toFixed(1)+'%';
+    el.classList.add('on');el.classList.toggle('part',w<1);
+    el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
+    el.style.color=w>=0.5?inkOn(c):'var(--ink)';
     el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
-  else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
+  else{el.classList.remove('on','part');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintGrid(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);}
 function repaintAll(){repaintGrid();updateRangeInfo();}
