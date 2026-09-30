@@ -449,18 +449,22 @@ function refreshPalette(){
 }
 const mix=(A,B,t)=>[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t,A[2]+(B[2]-A[2])*t];
 const toCss=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
-function divergeColor(eq){ // eq 0..1, midpoint .5
+function divergeLab(eq){ // eq 0..1, midpoint .5
   const t=Math.max(-1,Math.min(1,(eq-0.5)/0.5));
   const s=Math.sign(t)*Math.pow(Math.abs(t),0.72);
-  const lab=mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));
-  return oklab2rgb(lab);}
-function weightColor(w){return oklab2rgb(mix(PAL.surf,PAL.opp,0.18+0.82*w));}
+  return mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
+const divergeColor=eq=>oklab2rgb(divergeLab(eq));
+/* Range cells take the heatmap's equity colour once a result exists, faded
+   toward the surface by weight so partial weights still read as partial.
+   Cells with no result yet (just painted, or fully blocked) keep --opp. */
+function weightColor(w,eq){return oklab2rgb(mix(PAL.surf,eq>=0?divergeLab(eq):PAL.opp,0.18+0.82*w));}
 const lum=c=>0.2126*s2l(c[0])+0.7152*s2l(c[1])+0.0722*s2l(c[2]);
 const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 
 /* ================= state ================= */
 let hero=[], board=[], activeSlot={kind:'hero',i:0};
 let cellW=Array.from({length:13},()=>new Float64Array(13));
+const cellEq=Array.from({length:13},()=>new Float64Array(13).fill(-1));
 let paintW=1, precision=1200000, lastRes=null;
 
 /* ---- DOM build ---- */
@@ -529,11 +533,12 @@ let dragging=false,dragErase=false;
 function setCell(i,j,w){if(cellW[i][j]!==w){cellW[i][j]=w;paintCell(i,j);}}
 function paintCell(i,j){
   const el=rgrid.children[i*13+j],w=cellW[i][j];
-  if(w>0){const c=weightColor(w);el.classList.add('on');el.style.background=toCss(c);el.style.color=inkOn(c);
-    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%';}
+  if(w>0){const e=cellEq[i][j],c=weightColor(w,e);el.classList.add('on');el.style.background=toCss(c);el.style.color=inkOn(c);
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
-function repaintAll(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);updateRangeInfo();}
+function repaintGrid(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);}
+function repaintAll(){repaintGrid();updateRangeInfo();}
 function cellFromEvent(e){
   const t=document.elementFromPoint(e.clientX,e.clientY);
   if(!t||!t.classList.contains('rc'))return null;
@@ -675,13 +680,14 @@ function showResult(r){
 function clearHeat(){
   for(const el of hmEl.querySelectorAll('.hc')){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.title='';}
   $('tbl').querySelector('tbody').innerHTML='';
+  for(const r of cellEq)r.fill(-1);repaintGrid();
 }
 function drawHeat(r){
   const agg=Array.from({length:13},()=>Array.from({length:13},()=>({s:0,w:0,n:0})));
   for(const pc of r.perCombo){const [i,j]=cellOf(pc.a,pc.b);const a=agg[i][j];a.s+=pc.eq*pc.w;a.w+=pc.w;a.n++;}
   const rows=[];
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){
-    const el=hmCells[i][j],a=agg[i][j];
+    const el=hmCells[i][j],a=agg[i][j];cellEq[i][j]=a.w>0?a.s/a.w:-1;
     if(a.w<=0){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.removeAttribute('data-tip');continue;}
     const eq=a.s/a.w,c=divergeColor(eq);
     el.className='hc on';el.style.background=toCss(c);el.style.color=inkOn(c);
@@ -689,6 +695,7 @@ function drawHeat(r){
     el.dataset.tip=CELLN[i][j]+'  ヒーロー '+(eq*100).toFixed(1)+'%  ('+a.n+'コンボ, ウェイト'+Math.round(a.w/a.n*100)+'%)';
     rows.push([CELLN[i][j],eq,a.n,a.w/a.n]);
   }
+  repaintGrid();
   rows.sort((x,y)=>x[1]-y[1]);
   $('tbl').querySelector('tbody').innerHTML=rows.map(x=>
     '<tr><td>'+x[0]+'</td><td>'+(x[1]*100).toFixed(2)+'%</td><td>'+x[2]+'</td><td>'+Math.round(x[3]*100)+'%</td></tr>').join('');
