@@ -110,6 +110,11 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .slot .ph{font-size:16px;color:var(--ink-3);font-weight:500}
 .grp{display:flex;flex-direction:column;gap:7px}
 .grphd{display:flex;align-items:center;gap:8px}
+/* Label, cards and the clear button on one line: the header box dissolves so
+   its two children join the row, and the button moves past the cards. */
+.grp.inl{flex-direction:row;align-items:center;gap:8px}
+.grp.inl>.grphd{display:contents}
+.grp.inl>.grphd>.tbtn{order:1}
 .lbl{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 .slots{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:3px}
@@ -234,7 +239,7 @@ th:first-child,td:first-child{text-align:left}
     <section class="panel" id="boardPanel" aria-labelledby="h-board">
       <h2 id="h-board">ボードとデッド</h2>
       <div class="slots">
-        <div class="grp">
+        <div class="grp inl">
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
         </div>
