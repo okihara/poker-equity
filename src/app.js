@@ -297,7 +297,7 @@ function clearResult(msg){
   $('eqv').textContent='–';$('eqse').textContent='';$('eqv').parentNode.classList.remove('interim');$('precBtn').hidden=true;
   for(const id of ['segW','segT','segL']){const e=$(id);e.style.width='0';e.textContent='';}
   $('kw').textContent='–';$('kt').textContent='–';$('kl').textContent='–';
-  $('chips').innerHTML='';$('matchup').innerHTML=msg;
+  $('chips').innerHTML='';$('matchup').innerHTML='';$('resmsg').textContent=msg;$('resmsg').hidden=!msg;
   $('prog').classList.remove('on');
   clearHeat();
 }
@@ -324,6 +324,7 @@ async function run(){
   lastRes=res;showResult(res);save();
 }
 function showResult(r){
+  $('resmsg').hidden=true;
   $('eqv').textContent=(r.equity*100).toFixed(2);
   $('eqse').textContent=r.se>0?'± '+(r.se*196).toFixed(2):'完全列挙';
   /* only a sampled result (preflop with dead cards) has a precision to change */

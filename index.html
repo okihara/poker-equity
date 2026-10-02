@@ -65,6 +65,12 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .bignum .pct{font-size:18px;font-weight:700;color:var(--hero);font-family:var(--ff-ui);position:relative;top:-2px}
 .bignum .pm{font-size:11px;color:var(--ink-3);margin-left:4px}
 .precbtn{margin-top:8px}
+/* Only the percentage stays in view; the matchup, win/tie/lose bar and chips
+   fold away. Prompts ("pick hero's two cards") must not hide in the fold, so
+   they get their own line outside it. */
+.resmsg{font-size:13px;color:var(--ink-2)}
+.res details.resdet{margin-top:0}
+.resdet[open]>summary{margin-bottom:8px}
 .matchup{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin-bottom:10px}
 /* Narrow enough and "hero vs range / board <5 cards>" wraps to a second line.
    Reserve both lines so a board does not push the panel down: 2 x 19.5px line
@@ -202,6 +208,9 @@ th:first-child,td:first-child{text-align:left}
         <button class="tbtn precbtn" id="precBtn" type="button" hidden></button>
       </div>
       <div>
+        <div class="resmsg" id="resmsg" hidden></div>
+        <details class="resdet" id="resdet">
+        <summary>詳細（勝ち・負けの内訳と計算条件）</summary>
         <div class="matchup" id="matchup"></div>
         <div class="bar" id="bar">
           <div class="seg-w" id="segW" style="width:0"></div>
@@ -214,6 +223,7 @@ th:first-child,td:first-child{text-align:left}
           <span><i style="background:var(--opp)"></i>負け <b id="kl" style="font-family:var(--ff-num)">–</b></span>
         </div>
         <div class="chips" id="chips"></div>
+        </details>
         <div class="prog" id="prog"><i id="progi"></i></div>
       </div>
     </div>
@@ -894,7 +904,7 @@ function clearResult(msg){
   $('eqv').textContent='–';$('eqse').textContent='';$('eqv').parentNode.classList.remove('interim');$('precBtn').hidden=true;
   for(const id of ['segW','segT','segL']){const e=$(id);e.style.width='0';e.textContent='';}
   $('kw').textContent='–';$('kt').textContent='–';$('kl').textContent='–';
-  $('chips').innerHTML='';$('matchup').innerHTML=msg;
+  $('chips').innerHTML='';$('matchup').innerHTML='';$('resmsg').textContent=msg;$('resmsg').hidden=!msg;
   $('prog').classList.remove('on');
   clearHeat();
 }
@@ -921,6 +931,7 @@ async function run(){
   lastRes=res;showResult(res);save();
 }
 function showResult(r){
+  $('resmsg').hidden=true;
   $('eqv').textContent=(r.equity*100).toFixed(2);
   $('eqse').textContent=r.se>0?'± '+(r.se*196).toFixed(2):'完全列挙';
   /* only a sampled result (preflop with dead cards) has a precision to change */
