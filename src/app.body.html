@@ -31,7 +31,7 @@
     <div class="warn" id="warn" hidden></div>
   </section>
 
-  <div class="cols">
+  <div class="cols" id="cols">
     <section class="panel" aria-labelledby="h-hand">
       <h2 id="h-hand">ハンドとボード</h2>
       <div class="slots">
@@ -47,6 +47,13 @@
           <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
           <div class="slotrow" id="deadSlots"></div>
         </div>
+        <div class="grp">
+          <span class="lbl" title="デッドカードありのプリフロップだけはボードをサンプリングします。それ以外は常に完全な値です。">精度（デッドありのプリフロップ）</span>
+          <div class="segbtns" id="pbtns">
+            <button data-p="2000" aria-pressed="true">標準</button>
+            <button data-p="10000" aria-pressed="false">高精度</button>
+          </div>
+        </div>
       </div>
       <details class="tips">
         <summary>TIPS</summary>
@@ -59,57 +66,45 @@
       </details>
     </section>
 
-    <section class="panel" aria-labelledby="h-range">
-      <div class="rangehd">
-        <h2 id="h-range" class="seclabel">相手のレンジ</h2>
-        <div class="segbtns" id="sbtns" role="group" aria-label="編集するレンジ" hidden>
-          <button data-s="0" aria-pressed="false">ヒーロー</button>
-          <button data-s="1" aria-pressed="true">相手</button>
-        </div>
-      </div>
+    <!-- One range editor; app.js clones it so range mode shows hero's above (or
+         left of) villain's. Everything inside is addressed by class, not id. -->
+    <section class="panel rpanel" id="rp1" data-k="1">
+      <h2 class="rtitle">相手のレンジ</h2>
       <div class="ctl">
         <div class="ctl-block">
           <span class="lbl">上位n%で一括選択</span>
           <div class="sliderow">
-            <input type="range" id="topSlider" min="0" max="100" step="0.1" value="15" aria-label="上位何パーセントのハンドを選ぶか">
-            <span class="pctout" id="topOut">15.0%</span>
+            <input type="range" class="topSlider" min="0" max="100" step="0.1" value="15" aria-label="上位何パーセントのハンドを選ぶか">
+            <span class="pctout topOut">15.0%</span>
           </div>
         </div>
         <div class="ctl-block">
           <span class="lbl">塗るウェイト</span>
-          <div class="segbtns" id="wbtns">
+          <div class="segbtns wbtns">
             <button data-w="1" aria-pressed="true">100%</button>
             <button data-w="0.75" aria-pressed="false">75%</button>
             <button data-w="0.5" aria-pressed="false">50%</button>
             <button data-w="0.25" aria-pressed="false">25%</button>
           </div>
         </div>
-        <div class="ctl-block">
-          <span class="lbl" title="デッドカードありのプリフロップだけはボードをサンプリングします。それ以外は常に完全な値です。">精度（デッドありのプリフロップ）</span>
-          <div class="segbtns" id="pbtns">
-            <button data-p="2000" aria-pressed="true">標準</button>
-            <button data-p="10000" aria-pressed="false">高精度</button>
-          </div>
-        </div>
       </div>
-      <div class="gridwrap"><div class="rgrid" id="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
+      <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
       <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
-      <div class="presets" id="presets"></div>
+      <div class="presets"></div>
       <div class="rowend">
-        <button class="tbtn" id="clrRange">レンジをクリア</button>
-        <button class="tbtn" id="allRange">全ハンド (100%)</button>
-        <span class="chip" id="rangeInfo">–</span>
+        <button class="tbtn clrRange">レンジをクリア</button>
+        <button class="tbtn allRange">全ハンド (100%)</button>
+        <span class="chip rangeInfo">–</span>
       </div>
-      <textarea id="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
+      <textarea class="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
       <div class="rowend">
-        <button class="tbtn" id="applyText">テキストを適用</button>
+        <button class="tbtn applyText">テキストを適用</button>
         <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
       </div>
       <details class="tips">
         <summary>TIPS</summary>
         <ul>
           <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
-          <li>レンジ vs レンジでは、右上の「ヒーロー / 相手」で編集するレンジを切り替えます。</li>
           <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
         </ul>
       </details>
@@ -119,7 +114,13 @@
   <section class="panel" aria-labelledby="h-hm">
     <div class="hmhead">
       <div>
-        <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
+        <div class="hmtitle">
+          <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
+          <div class="segbtns" id="hmbtns" role="group" aria-label="表示するレンジ" hidden>
+            <button data-s="0" aria-pressed="false">ヒーローのレンジ</button>
+            <button data-s="1" aria-pressed="true">相手のレンジ</button>
+          </div>
+        </div>
         <div class="note" style="margin:0" id="hmnote">相手のレンジの各ハンドに対するヒーローのエクイティ。</div>
       </div>
       <div class="legend">
@@ -136,7 +137,7 @@
       <summary>TIPS</summary>
       <ul>
         <li>マスにポインタを合わせると、エクイティ・コンボ数・ウェイトの内訳が出ます。</li>
-        <li>レンジ vs レンジでは、編集中のレンジ（ヒーロー / 相手）のハンド別エクイティを表示します。色は常にヒーロー視点です。</li>
+        <li>レンジ vs レンジでは、見出し横のボタンで表示するレンジを切り替えます。色は常にヒーロー視点です。</li>
       </ul>
     </details>
   </section>

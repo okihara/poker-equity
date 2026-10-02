@@ -37,20 +37,18 @@ const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 
 /* ================= state ================= */
 /* mode 'hand': hero's two cards vs ranges[1]. mode 'range': ranges[0] vs
-   ranges[1]. The grid edits ranges[side]; cellW always points at that one. */
+   ranges[1], each edited in its own panel RP[k], hero's first. */
 let hero=[], board=[], dead=[], activeSlot=null; // the slot the open picker fills
-let mode='hand', side=1;
+let mode='hand', hmSide=1; // hmSide: the range the heatmap shows
 const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
 const ranges=[newRange(),newRange()];
-let cellW=ranges[1];
-const cellEq=Array.from({length:13},()=>new Float64Array(13).fill(-1));
-let paintW=1, precision=2000, lastRes=null;
+let precision=2000, lastRes=null;
 const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'},dead:{cap:4,label:'デッド'}};
 const cardsOf=k=>k==='hero'?hero:k==='board'?board:dead;
 
 /* ---- DOM build ---- */
 const $=id=>document.getElementById(id);
-const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), deadSlots=$('deadSlots'), picker=$('picker'), rgrid=$('rgrid'), hmEl=$('hm');
+const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), deadSlots=$('deadSlots'), picker=$('picker'), hmEl=$('hm');
 function buildSlots(){
   heroSlots.innerHTML='';boardSlots.innerHTML='';deadSlots.innerHTML='';
   for(let i=0;i<2;i++)heroSlots.appendChild(mkSlot('hero',i));
@@ -102,13 +100,28 @@ dlg.addEventListener('click',e=>{if(e.target!==dlg)return;const r=dlg.getBoundin
 $('pickClose').addEventListener('click',closePicker);
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
   cardsOf(activeSlot.kind).splice(activeSlot.i,1);schedule();closePicker();});
-const hmCells=[];
-function buildGrids(){
-  rgrid.innerHTML='';hmEl.innerHTML='';
-  for(let i=0;i<13;i++)for(let j=0;j<13;j++){
-    const b=document.createElement('button');b.type='button';b.className='rc'+(i===j?' pair':'');
-    b.dataset.i=i;b.dataset.j=j;b.textContent=CELLN[i][j];rgrid.appendChild(b);
+/* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
+const RP=[];
+function buildPanels(){
+  const v=$('rp1'),h=v.cloneNode(true);
+  h.id='rp0';h.dataset.k='0';h.querySelector('.tips').remove();
+  v.parentNode.insertBefore(h,v);
+  for(const el of [h,v]){
+    const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=k?'相手':'ヒーロー';
+    const P={k,el,w:ranges[k],eq:Array.from({length:13},()=>new Float64Array(13).fill(-1)),paintW:1,
+      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle')};
+    P.title.id='h-range'+k;el.setAttribute('aria-labelledby',P.title.id);
+    P.grid.setAttribute('aria-label',nm+'のレンジグリッド');P.text.setAttribute('aria-label',nm+'のレンジのテキスト表記');
+    P.slider.setAttribute('aria-label',nm+'のレンジを上位何パーセントで選ぶか');
+    for(let i=0;i<13;i++)for(let j=0;j<13;j++){
+      const b=document.createElement('button');b.type='button';b.className='rc'+(i===j?' pair':'');
+      b.dataset.i=i;b.dataset.j=j;b.textContent=CELLN[i][j];P.grid.appendChild(b);}
+    wirePanel(P);RP[k]=P;
   }
+}
+const hmCells=[];
+function buildHeatGrid(){
+  hmEl.innerHTML='';
   const corner=document.createElement('div');corner.className='hl';hmEl.appendChild(corner);
   for(let j=0;j<13;j++){const d=document.createElement('div');d.className='hl';d.textContent=RANKS[12-j];hmEl.appendChild(d);}
   for(let i=0;i<13;i++){
@@ -122,67 +135,84 @@ function buildGrids(){
 }
 
 /* ---- range painting ---- */
-let dragging=false,dragErase=false;
-function setCell(i,j,w){if(cellW[i][j]!==w){cellW[i][j]=w;paintCell(i,j);}}
-function paintCell(i,j){
-  const el=rgrid.children[i*13+j],w=cellW[i][j];
-  /* Colour carries equity (the heatmap's scale, or --opp before a result
-     exists) at full strength; weight is the filled height from the bottom,
-     so a partial weight never turns into a washed-out tint. */
-  if(w>0){const e=cellEq[i][j],c=oklab2rgb(e>=0?divergeLab(e):side?PAL.opp:PAL.hero),h=(w*100).toFixed(1)+'%';
+let drag=null,dragErase=false; // drag: the panel being painted
+function setCell(P,i,j,w){if(P.w[i][j]!==w){P.w[i][j]=w;paintCell(P,i,j);}}
+function paintCell(P,i,j){
+  const el=P.grid.children[i*13+j],w=P.w[i][j];
+  /* Colour carries equity (the heatmap's scale, or the side's own colour before
+     a result exists) at full strength; weight is the filled height from the
+     bottom, so a partial weight never turns into a washed-out tint. */
+  if(w>0){const e=P.eq[i][j],c=oklab2rgb(e>=0?divergeLab(e):P.k?PAL.opp:PAL.hero),h=(w*100).toFixed(1)+'%';
     el.classList.add('on');
     el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
     el.style.color=w>=0.5?inkOn(c):'var(--ink)';
-    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / '+(side?'ヒーロー ':'')+(e*100).toFixed(1)+'%':'');}
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
-function repaintGrid(){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(i,j);}
-function repaintAll(){repaintGrid();updateRangeInfo();}
-function cellFromEvent(e){
+function repaintGrid(P){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(P,i,j);}
+function repaintAll(P){repaintGrid(P);updateRangeInfo(P);}
+/* only cells of P's own grid: a drag that wanders onto the other panel stops there */
+function cellFromEvent(e,P){
   const t=document.elementFromPoint(e.clientX,e.clientY);
-  if(!t||!t.classList.contains('rc'))return null;
+  if(!t||t.parentNode!==P.grid)return null;
   return [+t.dataset.i,+t.dataset.j];
 }
-rgrid.addEventListener('pointerdown',e=>{
-  const c=cellFromEvent(e);if(!c)return;
-  e.preventDefault();dragging=true;
-  dragErase=cellW[c[0]][c[1]]===paintW;
-  setCell(c[0],c[1],dragErase?0:paintW);updateRangeInfo();
-  rgrid.setPointerCapture(e.pointerId);
-});
-rgrid.addEventListener('pointermove',e=>{
-  if(!dragging)return;const c=cellFromEvent(e);if(!c)return;
-  setCell(c[0],c[1],dragErase?0:paintW);
-});
-function endDrag(){if(!dragging)return;dragging=false;updateRangeInfo();syncText();schedule();}
-rgrid.addEventListener('pointerup',endDrag);
-rgrid.addEventListener('pointercancel',endDrag);
+function endDrag(){if(!drag)return;const P=drag;drag=null;updateRangeInfo(P);syncText(P);schedule();}
 window.addEventListener('pointerup',endDrag);
+/* MTT 100bb chipEV opening frequencies. */
+const PRESETS=[['UTG 16.5%',16.5],['MP 22%',22],['CO 36.3%',36.3],['BTN 56%',56],['SB 88%',88]];
+function wirePanel(P){
+  const g=P.grid,q=c=>P.el.querySelector('.'+c);
+  g.addEventListener('pointerdown',e=>{
+    const c=cellFromEvent(e,P);if(!c)return;
+    e.preventDefault();drag=P;
+    dragErase=P.w[c[0]][c[1]]===P.paintW;
+    setCell(P,c[0],c[1],dragErase?0:P.paintW);updateRangeInfo(P);
+    g.setPointerCapture(e.pointerId);
+  });
+  g.addEventListener('pointermove',e=>{
+    if(drag!==P)return;const c=cellFromEvent(e,P);if(!c)return;
+    setCell(P,c[0],c[1],dragErase?0:P.paintW);
+  });
+  g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);
+  const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
+  P.slider.addEventListener('input',()=>top(+P.slider.value));
+  const wb=q('wbtns');
+  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);});
+  for(const [label,pct] of PRESETS){
+    const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
+    b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
+  }
+  const fill=x=>{for(const r of P.w)r.fill(x);repaintAll(P);syncText(P);schedule();};
+  q('clrRange').addEventListener('click',()=>fill(0));
+  q('allRange').addEventListener('click',()=>fill(1));
+  q('applyText').addEventListener('click',()=>{applyText(P);syncText(P);});
+}
 
 /* ---- range helpers ---- */
-function totalCombos(){let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)t+=cellW[i][j]*comboCount(CELLN[i][j]);return t;}
-function selectTopPct(p){
+function totalCombos(w){let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)t+=w[i][j]*comboCount(CELLN[i][j]);return t;}
+function selectTopPct(P,p){
   const target=1326*p/100;let acc=0;
-  for(let i=0;i<13;i++)cellW[i].fill(0);
+  for(const r of P.w)r.fill(0);
   for(const nm of RANK_ORDER){
     const n=comboCount(nm);if(acc+n>target+1e-9)break;
-    const [i,j]=NAME2IJ[nm];cellW[i][j]=1;acc+=n;
+    const [i,j]=NAME2IJ[nm];P.w[i][j]=1;acc+=n;
   }
-  repaintAll();syncText();
+  repaintAll(P);syncText(P);
 }
-function updateRangeInfo(){
-  const t=totalCombos();
-  $('rangeInfo').textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)';
+function updateRangeInfo(P){
+  const t=totalCombos(P.w);
+  P.info.textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)';
 }
-function syncText(){
+function syncText(P){
   const parts=[];
-  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=cellW[i][j];
+  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=P.w[i][j];
     if(w>0)parts.push(CELLN[i][j]+(w<1?':'+w:''));}
-  $('rtext').value=parts.join(',');
+  P.text.value=parts.join(',');
 }
-function applyText(){
-  const txt=$('rtext').value;
-  for(let i=0;i<13;i++)cellW[i].fill(0);
+function applyText(P){
+  const txt=P.text.value;
+  for(const r of P.w)r.fill(0);
   let bad=0;
   for(let tok of txt.split(/[,\s]+/)){
     tok=tok.trim();if(!tok)continue;
@@ -196,20 +226,10 @@ function applyText(){
     if(!(nm in NAME2IJ)){bad++;continue;}
     let w=m[1]===undefined?1:parseFloat(m[1].replace('%',''))*(m[1].includes('%')?0.01:1);
     if(!(w>0))w=0;if(w>1)w=1;
-    const [i,j]=NAME2IJ[nm];cellW[i][j]=w;
+    const [i,j]=NAME2IJ[nm];P.w[i][j]=w;
   }
-  repaintAll();schedule();
+  repaintAll(P);schedule();
   if(bad)flash(bad+'個のトークンを認識できませんでした。');
-}
-/* MTT 100bb chipEV opening frequencies. */
-const PRESETS=[['UTG 16.5%',16.5],['MP 22%',22],['CO 36.3%',36.3],['BTN 56%',56],['SB 88%',88]];
-function buildPresets(){
-  const p=$('presets');p.innerHTML='';
-  for(const [label,pct] of PRESETS){
-    const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
-    b.addEventListener('click',()=>{$('topSlider').value=pct;$('topOut').textContent=pct.toFixed(1)+'%';selectTopPct(pct);schedule();});
-    p.appendChild(b);
-  }
 }
 
 /* ---- render ---- */
@@ -321,28 +341,34 @@ function showResult(r){
 function clearHeat(){
   for(const el of hmEl.querySelectorAll('.hc')){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.title='';el.removeAttribute('data-tip');}
   $('tbl').querySelector('tbody').innerHTML='';
-  for(const r of cellEq)r.fill(-1);repaintGrid();
+  for(const P of RP){for(const r of P.eq)r.fill(-1);repaintGrid(P);}
 }
-/* The heatmap shows the range being edited, always in hero's terms: hero's
-   equity with each hand of its own range, or against each hand of villain's.
-   Within a cell, combos count by their share of the matchups, so a combo that
-   blockers keep out of most pairs moves the cell less. */
-function drawHeat(r){
+/* Per-cell equity of one side's range, always in hero's terms: hero's equity
+   with each hand of its own range, or against each hand of villain's. Within a
+   cell, combos count by their share of the matchups, so a combo that blockers
+   keep out of most pairs moves the cell less. */
+function aggregate(r,k){
   const agg=Array.from({length:13},()=>Array.from({length:13},()=>({s:0,m:0,w:0,n:0})));
-  const pcs=side?r.opp.perCombo:r.perCombo;
-  for(const pc of pcs){const [i,j]=cellOf(pc.a,pc.b);const a=agg[i][j],eq=side?1-pc.eq:pc.eq;
+  for(const pc of k?r.opp.perCombo:r.perCombo){const [i,j]=cellOf(pc.a,pc.b);const a=agg[i][j],eq=k?1-pc.eq:pc.eq;
     a.s+=eq*pc.share;a.m+=pc.share;a.w+=pc.w;a.n++;}
-  const rows=[],who=side?'ヒーロー ':'';
+  return agg;
+}
+/* Colours both range grids, and the heatmap for the range hmSide picks. */
+function drawHeat(r){
+  for(const P of RP){if(mode==='hand'&&!P.k)continue;
+    const agg=aggregate(r,P.k);
+    for(let i=0;i<13;i++)for(let j=0;j<13;j++){const a=agg[i][j];P.eq[i][j]=a.m>0?a.s/a.m:-1;}
+    repaintGrid(P);}
+  const agg=aggregate(r,hmSide),rows=[];
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){
-    const el=hmCells[i][j],a=agg[i][j];cellEq[i][j]=a.m>0?a.s/a.m:-1;
+    const el=hmCells[i][j],a=agg[i][j];
     if(a.m<=0){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.removeAttribute('data-tip');continue;}
     const eq=a.s/a.m,c=divergeColor(eq);
     el.className='hc on';el.style.background=toCss(c);el.style.color=inkOn(c);
     el.textContent=Math.round(eq*100);
-    el.dataset.tip=CELLN[i][j]+'  '+who+(eq*100).toFixed(1)+'%  ('+a.n+'コンボ, ウェイト'+Math.round(a.w/a.n*100)+'%)';
+    el.dataset.tip=CELLN[i][j]+'  ヒーロー '+(eq*100).toFixed(1)+'%  ('+a.n+'コンボ, ウェイト'+Math.round(a.w/a.n*100)+'%)';
     rows.push([CELLN[i][j],eq,a.n,a.w/a.n]);
   }
-  repaintGrid();
   rows.sort((x,y)=>x[1]-y[1]);
   $('tbl').querySelector('tbody').innerHTML=rows.map(x=>
     '<tr><td>'+x[0]+'</td><td>'+(x[1]*100).toFixed(2)+'%</td><td>'+x[2]+'</td><td>'+Math.round(x[3]*100)+'%</td></tr>').join('');
@@ -362,7 +388,7 @@ function drawLegend(){
 }
 
 /* ---- persistence ---- */
-function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,dead,mode,side,
+function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,dead,mode,hm:hmSide,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
@@ -370,57 +396,48 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<2;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
-  if(s.mode==='range')mode='range';if(s.side===0)side=0;
+  if(s.mode==='range')mode='range';if(s.hm===0)hmSide=0;
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
   return true;}catch(e){return false;}}
 
-/* ---- mode and range side ---- */
+/* ---- mode and heatmap side ---- */
 const pressed=(box,el)=>{for(const x of box.children)x.setAttribute('aria-pressed',x===el?'true':'false');};
-function setSide(s){
-  side=mode==='hand'?1:s;cellW=ranges[side];
-  pressed($('sbtns'),$('sbtns').children[side]);
-  $('h-range').textContent=mode==='hand'?'相手のレンジ':'レンジ';
-  $('hmnote').textContent=side?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
-  for(const r of cellEq)r.fill(-1);
+function setHmSide(s){
+  hmSide=mode==='hand'?1:s;
+  pressed($('hmbtns'),$('hmbtns').children[hmSide]);
+  $('hmnote').textContent=hmSide?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
   if(lastRes)drawHeat(lastRes);else clearHeat();
-  repaintAll();syncText();
 }
 function setMode(m){
   mode=m;
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
   $('title').textContent=m==='hand'?'ハンド vs レンジ エクイティ':'レンジ vs レンジ エクイティ';
-  $('heroGrp').hidden=m!=='hand';$('sbtns').hidden=m==='hand';
+  $('heroGrp').hidden=m!=='hand';$('hmbtns').hidden=m==='hand';
+  $('cols').classList.toggle('rvr',m==='range');RP[0].el.hidden=m==='hand';
+  RP[0].title.textContent='ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.filter(c=>!u.has(c));}
   lastRes=null;
-  /* an empty hero range would only produce a prompt; open it for editing instead */
-  const empty=w=>w.every(r=>r.every(x=>!x));
-  setSide(m==='range'&&empty(ranges[0])?0:side);render();
+  for(const P of RP){repaintAll(P);syncText(P);}
+  setHmSide(hmSide);render();
 }
 
 /* ---- controls ---- */
 $('mbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;
   setMode(b.dataset.m);schedule();});
-$('sbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setSide(+b.dataset.s);});
-$('topSlider').addEventListener('input',e=>{const p=+e.target.value;
-  $('topOut').textContent=p.toFixed(1)+'%';selectTopPct(p);schedule();});
-$('wbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  paintW=+b.dataset.w;pressed($('wbtns'),b);});
+$('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setHmSide(+b.dataset.s);save();});
 $('pbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   precision=+b.dataset.p;pressed($('pbtns'),b);schedule();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
 $('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
-$('clrRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(0);repaintAll();syncText();schedule();});
-$('allRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(1);repaintAll();syncText();schedule();});
-$('applyText').addEventListener('click',()=>{applyText();syncText();});
 
 /* ---- boot ---- */
-refreshPalette();buildSlots();buildPicker();buildGrids();buildPresets();drawLegend();startWorker();
+refreshPalette();buildSlots();buildPicker();buildPanels();buildHeatGrid();drawLegend();startWorker();
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
-  selectTopPct(15);
+  selectTopPct(RP[1],15);
 }else{
   pressed($('pbtns'),$('pbtns').querySelector('[data-p="'+precision+'"]'));
 }
