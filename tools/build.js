@@ -22,29 +22,34 @@ const parts = {
   body: R('src/app.body.html').trim(),
   rank: R('src/rank-order.json').trim(),
   evaluator: R('src/evaluator.js').trimEnd(),
-  equity: R('src/equity.js').trimEnd(),
   preflop: R('src/preflop.js').trimEnd(),
   rvr: R('src/rvr.js').trimEnd(),
+  worker: R('src/worker.js').trimEnd(),
   app: R('src/app.js').trimEnd(),
 };
 
 const table = preflopTable();
 if (!table) throw new Error('src/preflop-table.bin is missing — run `npm run preflop` first');
 
+/* Two scripts. #engine is plain engine code with no DOM access: it runs on the
+   page like any script, and app.js also hands its text to a Worker (via a Blob
+   URL) so the heavy work leaves the UI thread without a second file. */
 const script = [
-  '<script>',
-  '/* RANK_ORDER is generated from src/rank-order.json by tools/build.js */',
-  'const RANK_ORDER=' + parts.rank + ';',
+  '<script id="engine">',
   '/* PF_TABLE is src/preflop-table.bin, base64 */',
   'const PF_TABLE="' + table + '";',
   '',
   parts.evaluator,
   '',
-  parts.equity,
-  '',
   parts.preflop,
   '',
   parts.rvr,
+  '',
+  parts.worker,
+  '</script>',
+  '<script>',
+  '/* RANK_ORDER is generated from src/rank-order.json by tools/build.js */',
+  'const RANK_ORDER=' + parts.rank + ';',
   '',
   parts.app,
   '</script>',

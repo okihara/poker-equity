@@ -1,4 +1,5 @@
 /* ================= range vs range ================= */
+const sleep=()=>new Promise(r=>setTimeout(r,0));
 /* Range = {n,c0,c1,w}: duplicates merged, blocked and zero-weight combos dropped. */
 function rvrPrep(raw,used){
   const acc=new Float64Array(2704),keys=[];
@@ -79,7 +80,7 @@ async function computeRangeEquity(rawA,rawB,board,dead,opts){
   if(L!==0&&(L<3||L>5))return{error:'ボードは0枚か3〜5枚にしてください。'};
   const used=new Uint8Array(52);for(const c of board)used[c]=1;for(const c of dead)used[c]=1;
   const A=rvrPrep(rawA,used),B=rvrPrep(rawB,used);
-  if(!A.n||!B.n)return{error:'レンジ'+(A.n?'B':'A')+'のコンボがすべてブロックされています。'};
+  if(!A.n||!B.n)return{error:(A.n?'相手':'ヒーロー')+'のレンジのコンボがすべてブロックされています。'};
   if(L===0&&!dead.length)return rvrPreflop(A,B);
   const deck=[];for(let c=0;c<52;c++)if(!used[c])deck.push(c);
   const k=5-L,mc=L===0,D=deck.length,runs=[];

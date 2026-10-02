@@ -1,5 +1,8 @@
-/* ================= equity ================= */
-const sleep=()=>new Promise(r=>setTimeout(r,0));
+/* ================= hand vs range (reference) =================
+   The original hand-vs-range engine. The page now answers hand-vs-range as
+   range-vs-range with a one-combo hero range (src/rvr.js), so this no longer
+   ships; it stays as an independently written cross-check that
+   test/rvr.test.js and test/preflop.test.js hold the new engine against. */
 async function computeEquity(hero,board,rawCombos,opts){
   const EXACT_BUDGET=3e7, MC_TOTAL=opts.mcTotal||1200000;
   const used=new Uint8Array(52);used[hero[0]]=1;used[hero[1]]=1;
