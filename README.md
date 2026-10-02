@@ -59,6 +59,14 @@ const p4 =  s0&s1&s2&s3;                                     // クアッズ
 ランナウトごとの率を平均するのではなく分子・分母を合計すれば厳密な同時分布の期待値になる。
 ランナウトはシャッフルした順に回すので、計算途中の暫定値も偏りのない推定になる。
 
+**プリフロップのレンジ vs レンジ**は表引き。ヘッズアップのプリフロップ対戦 1326×1225 通りは、
+スートの入れ替えで同じになるものをまとめると **47,008 クラス**しかない。各クラスについて C(48,5) = 1,712,304 ボードを
+全列挙した勝ち数・引き分け数を uint32 で持つ `src/preflop-table.bin`（376KB）を `npm run preflop`（8コアで約8分）で生成し、
+ビルドが base64 で埋め込む。クラスの番号付け（`src/preflop.js` の `pfInit`）は生成スクリプトと実行時で同じコードなので、
+並び順がずれる余地がない。実行時は初回に 1326×1326 の対応表を展開し（約40ms）、以後はフルレンジ同士でも約9ms。
+整数カウントなので完全列挙と丸め誤差の範囲で一致する。デッドカードがあると表の前提が崩れるため、その場合だけ
+ボードを丸ごとサンプリングし（1ボードごとに全ペアをスイープ）、比推定量の標準誤差を返す。
+
 **「上位n%」の順序**（`src/rank-order.json`）は、169ハンドそれぞれのランダムハンドに対する
 オールインエクイティを 1ハンドあたり200万回で実測した順（AA 85.23% 〜 32o 32.27%）。
 プレイアビリティ補正は入れていないので、スモールペアは一般的なオープンレンジ表より高く出る。
@@ -84,6 +92,10 @@ npm test
 - **レンジ vs レンジ** — 全ペア × 全ランナウトを素朴に総当たりする参照実装と、ランダムなレンジ・ボード・デッドカード
   68ケースで総合と全コンボ別の値が 1e-9 以内で一致すること。レンジは5ランクから引いてカードの衝突・同一コンボ・
   引き分けを頻発させる。片側1コンボなら `computeEquity` と 1e-12 で一致、両側の対称性、ウェイトの相対性
+- **プリフロップ表** — 47,008 クラス全部が存在し得るカウントであること、代表ペア16個を素朴な全列挙で数え直して
+  整数で完全一致、任意のペア14組（向きもランダム）で同型対応と向きのフラグが正しいこと、`computeEquity` の固定値との一致、
+  `AA vs KK 81.95%`・`AKs vs QQ 46.05%`・`AKo vs 22 47.35%`・`AA vs ランダム 85.20%`。
+  デッドカードありのモンテカルロは全列挙の値が 4σ 以内に入ること
 - **既知の値** — `AKs vs QQ 46.05%`、`AKo vs QQ 43.24%`、`AA vs KK 81.95%`、`88 vs AKo 55.16%`、
   `AA vs ランダム 85.20%` ほか、完全列挙の結果を小数第3位まで固定
 - **不変量** — 勝ち+引き分け+負け = 1、ヒーローとビランのエクイティの和 = 1、
@@ -100,7 +112,9 @@ npm test
 src/
   evaluator.js      7枚ハンド評価器、カード/レンジのユーティリティ
   equity.js         computeEquity(hero, board, combos, opts)
+  preflop.js        プリフロップ対戦のスート同型クラスと表の展開（pfInit）
   rvr.js            computeRangeEquity(rangeA, rangeB, board, dead, opts)（レンジ vs レンジ）
+  preflop-table.bin 47,008 クラスの勝ち数・引き分け数（tools/build-preflop.js が生成）
   app.js            UI（グリッド、カード選択、ヒートマップ、配色）
   app.css           スタイル（ライトテーマのみ）
   app.head.html     <title> とフォント
@@ -110,11 +124,13 @@ tools/
   build.js          src/ を index.html と dist/artifact.html に組み立てる
   build-rank.js     rank-order.json を再計算する
   load-engine.js    Node から src/ をブラウザと同じスコープで読み込む
-  bench.js          評価器（と今後の計算）のスループット計測
+  build-preflop.js  preflop-table.bin を全列挙で生成する（worker_threads）
+  bench.js          評価器とレンジ vs レンジの速度計測
 test/
   evaluator.test.js
   evaluator-exhaustive.test.js
   rvr.test.js
+  preflop.test.js
   equity.test.js
   build.test.js
 index.html          スタンドアロン版（生成物）
@@ -124,10 +140,11 @@ dist/artifact.html  Claude Artifact 用のフラグメント（生成物、docty
 | コマンド | 内容 |
 | --- | --- |
 | `npm run build` | `src/` から `index.html` と `dist/artifact.html` を生成 |
-| `npm test` | 全テスト 44 件（約10秒） |
+| `npm test` | 全テスト 51 件（約10秒） |
 | `npm run check` | ビルドしてからテスト |
 | `npm run rank` | `src/rank-order.json` を再計算（約40秒） |
-| `npm run bench` | 評価器のスループットを計測 |
+| `npm run bench` | 評価器とレンジ vs レンジの速度を計測 |
+| `npm run preflop` | `src/preflop-table.bin` を再生成（約8分） |
 
 `src/evaluator.js` と `src/equity.js` はモジュール構文を持たないプレーンなスクリプトで、
 ブラウザでは `<script>` に連結され、Node では `tools/load-engine.js` が同じ順序で同じスコープに読み込む。
@@ -135,7 +152,7 @@ dist/artifact.html  Claude Artifact 用のフラグメント（生成物、docty
 
 ## 未実装
 
-- レンジ vs レンジのプリフロップと UI（作業中）
+- レンジ vs レンジの UI（作業中）
 - PLO（4枚）
 - `A5s+` / `JJ+` / `KQs-K9s` 形式のレンジ記法パース
 - マルチウェイのエクイティ

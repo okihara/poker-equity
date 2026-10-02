@@ -8,7 +8,8 @@
     "test": "node --test",
     "check": "npm run build && npm test",
     "rank": "node tools/build-rank.js",
-    "bench": "node tools/bench.js"
+    "bench": "node tools/bench.js",
+    "preflop": "node tools/build-preflop.js"
   },
   "engines": { "node": ">=18" }
 }

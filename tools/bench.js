@@ -55,7 +55,7 @@ async function benchRvr(board, target) {
   let min = Infinity;
   for (let i = 0; i < 3; i++) {
     const t = process.hrtime.bigint();
-    await E.computeRangeEquity(all, all, parseCards(board), [], {});
+    await E.computeRangeEquity(all, all, board ? parseCards(board) : [], [], {});
     min = Math.min(min, Number(process.hrtime.bigint() - t) / 1e6);
   }
   return [min.toFixed(1) + ' ms', 'target ' + target];
@@ -64,6 +64,8 @@ async function benchRvr(board, target) {
 (async () => {
   const rows = [
     ['eval7 (random 7-card hands)', ...benchEval7()],
+    ['preflop table init (once)', ((t) => { E.pfInit(); return Number(process.hrtime.bigint() - t) / 1e6; })(process.hrtime.bigint()).toFixed(1) + ' ms', ''],
+    ['rvr full vs full, preflop', ...await benchRvr('', '< 100ms')],
     ['rvr full vs full, flop', ...await benchRvr('Qs Js 2h', '< 1s')],
     ['rvr full vs full, turn', ...await benchRvr('Qs Js 2h 7d', 'instant')],
     ['rvr full vs full, river', ...await benchRvr('Qs Js 2h 7d 3c', 'instant')],
