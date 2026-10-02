@@ -5,6 +5,7 @@
   --ink:#0e1620; --ink-2:#46535f; --ink-3:#77838f;
   --hero:#eb6834; --hero-soft:#fdeee7;
   --opp:#2a78d6; --opp-soft:#e4eefb;
+  --clear:#c23a3a; --clear-soft:#fcecec; --clear-line:#efc4c4;
   --pole-hi:#2a78d6; --pole-lo:#d03b3b; --pole-mid:#eceef1;
   --spade:#0e1620; --heart:#d03b3b; --diamond:#2a78d6; --club:#0ca30c;
   --shadow:0 1px 2px rgba(14,22,32,.06),0 8px 24px -16px rgba(14,22,32,.24);
@@ -152,6 +153,9 @@ input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
 .segbtns button[aria-pressed=true]{background:var(--opp);color:#fff}
 .tbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--ink-2)}
 .tbtn:hover{border-color:var(--line-2);background:var(--surface-3)}
+/* The card clear buttons throw away what was picked, so they read as such. */
+.grphd .tbtn{color:var(--clear);background:var(--clear-soft);border-color:var(--clear-line)}
+.grphd .tbtn:hover{border-color:var(--clear);background:var(--clear-soft)}
 .presetlbl{margin-top:8px}
 .presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .note{font-size:11px;color:var(--ink-3);line-height:1.5;margin-top:6px}
