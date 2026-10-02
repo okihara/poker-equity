@@ -30,7 +30,7 @@ const p4 =  s0&s1&s2&s3;                                     // クアッズ
 ```
 
 ストレート判定と上位5枚の抽出は 8192 エントリの小さなテーブルで引く。7枚の評価は
-1コールあたり約 35ns（M2 / Node 22 で毎秒 2,800万回）。
+1コールあたり約 25ns（Apple Silicon / Node 20 で毎秒 3,900万回、`npm run bench` で計測）。
 
 **エクイティ計算**（`src/equity.js`）は残りボードの通り数で方式を切り替える:
 
@@ -62,6 +62,10 @@ npm test
 ```
 
 - **交差検証** — 7枚評価器を、C(7,5) の5枚組を総当たりする素朴な実装と 40,000 ショーダウンで照合。不一致ゼロ
+- **7枚の全列挙** — C(52,7) = 133,784,560 ハンドをすべて評価し、役ごとの出現数（ストレートフラッシュ 41,584 〜
+  ハイカード 23,294,460）と、異なる強度値がちょうど 4,824 通りであることを既知の値と照合する（約3秒）
+- **キッカーと境界** — 役ごとにキッカーの各スロットだけが違うハンド対を比べる。ホイールが最弱のストレートであること、
+  Q-K-A-2-3 が回り込まないこと、6〜7連続から上位5枚だけが使われること、ボードがそのまま役になる場合の引き分け
 - **全順序の一致** — 上の照合は「同じボードを共有する2ハンドの大小の符号」しか見ないので、
   一様 / 同スート5〜7枚 / ランク密集 / ホイール・ブロードウェイの4分布から各 6,000 ハンドを並べ、
   素朴な実装と**同値関係を含めて完全に同じ順序**になること、役カテゴリが一致することを検査する。
@@ -93,8 +97,10 @@ tools/
   build.js          src/ を index.html と dist/artifact.html に組み立てる
   build-rank.js     rank-order.json を再計算する
   load-engine.js    Node から src/ をブラウザと同じスコープで読み込む
+  bench.js          評価器（と今後の計算）のスループット計測
 test/
   evaluator.test.js
+  evaluator-exhaustive.test.js
   equity.test.js
   build.test.js
 index.html          スタンドアロン版（生成物）
@@ -104,9 +110,10 @@ dist/artifact.html  Claude Artifact 用のフラグメント（生成物、docty
 | コマンド | 内容 |
 | --- | --- |
 | `npm run build` | `src/` から `index.html` と `dist/artifact.html` を生成 |
-| `npm test` | 全テスト 31 件（約9秒） |
+| `npm test` | 全テスト 36 件（約10秒） |
 | `npm run check` | ビルドしてからテスト |
 | `npm run rank` | `src/rank-order.json` を再計算（約40秒） |
+| `npm run bench` | 評価器のスループットを計測 |
 
 `src/evaluator.js` と `src/equity.js` はモジュール構文を持たないプレーンなスクリプトで、
 ブラウザでは `<script>` に連結され、Node では `tools/load-engine.js` が同じ順序で同じスコープに読み込む。
