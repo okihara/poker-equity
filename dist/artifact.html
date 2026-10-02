@@ -19,7 +19,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff-ui);-webkit-text-size-adjust:100%}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
-h1,h2,h3{margin:0;text-wrap:balance}
+h2,h3{margin:0;text-wrap:balance}
 button{font:inherit;color:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--hero);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
@@ -41,7 +41,6 @@ button{font:inherit;color:inherit;cursor:pointer}
   .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"board board" "hero villain"}
 }
 .bignum.interim .v,.bignum.interim .pct{opacity:.5}
-h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-height:1.15}
 
 /* panels */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;box-shadow:var(--shadow)}
@@ -199,7 +198,6 @@ th:first-child,td:first-child{text-align:left}
 
 <div class="wrap">
   <header class="hd">
-    <h1 id="title">ハンド vs レンジ エクイティ</h1>
     <div class="hdact">
       <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
         <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
@@ -1041,7 +1039,6 @@ function setHmSide(s){
 function setMode(m){
   mode=m;
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
-  $('title').textContent=m==='hand'?'ハンド vs レンジ エクイティ':'レンジ vs レンジ エクイティ';
   /* the hero panel holds either the two-card hand or the range editor */
   $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
   $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');

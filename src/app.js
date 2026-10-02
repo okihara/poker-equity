@@ -424,7 +424,6 @@ function setHmSide(s){
 function setMode(m){
   mode=m;
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
-  $('title').textContent=m==='hand'?'ハンド vs レンジ エクイティ':'レンジ vs レンジ エクイティ';
   /* the hero panel holds either the two-card hand or the range editor */
   $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
   $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
