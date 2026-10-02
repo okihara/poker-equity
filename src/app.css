@@ -20,7 +20,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 
 /* header */
-.hd{padding:6px 10px 0}
+.hd{padding:6px 10px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.modebtns button{font-size:12px;padding:6px 11px}
+.modebtns button[aria-pressed=true]{background:var(--hero)}
+.rangehd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rangehd h2.seclabel{margin:0}
+.bignum.interim .v,.bignum.interim .pct{opacity:.5}
 h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-height:1.15}
 
 /* panels */

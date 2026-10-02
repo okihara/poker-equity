@@ -1,6 +1,10 @@
 <div class="wrap">
   <header class="hd">
-    <h1>ハンド vs レンジ エクイティ</h1>
+    <h1 id="title">ハンド vs レンジ エクイティ</h1>
+    <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
+      <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
+      <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+    </div>
   </header>
 
   <section class="panel" aria-label="計算結果">
@@ -31,7 +35,7 @@
     <section class="panel" aria-labelledby="h-hand">
       <h2 id="h-hand">ハンドとボード</h2>
       <div class="slots">
-        <div class="grp">
+        <div class="grp" id="heroGrp">
           <div class="grphd"><span class="lbl">ヒーロー</span><button class="tbtn" id="clrHero">クリア</button></div>
           <div class="slotrow" id="heroSlots"></div>
         </div>
@@ -39,14 +43,24 @@
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
         </div>
+        <div class="grp">
+          <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
+          <div class="slotrow" id="deadSlots"></div>
+        </div>
       </div>
       <div class="lbl" style="margin-bottom:7px">カードを選ぶ</div>
       <div class="picker" id="picker"></div>
-      <div class="note">枠をクリックしてから下のカードを選びます。埋まると自動で次の枠に進みます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</div>
+      <div class="note">枠をクリックしてから下のカードを選びます。埋まると自動で次の枠に進みます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</div>
     </section>
 
     <section class="panel" aria-labelledby="h-range">
-      <h2 id="h-range">相手のレンジ</h2>
+      <div class="rangehd">
+        <h2 id="h-range" class="seclabel">相手のレンジ</h2>
+        <div class="segbtns" id="sbtns" role="group" aria-label="編集するレンジ" hidden>
+          <button data-s="0" aria-pressed="false">ヒーロー</button>
+          <button data-s="1" aria-pressed="true">相手</button>
+        </div>
+      </div>
       <div class="ctl">
         <div class="ctl-block">
           <span class="lbl">上位n%で一括選択</span>
@@ -65,10 +79,10 @@
           </div>
         </div>
         <div class="ctl-block">
-          <span class="lbl">精度</span>
+          <span class="lbl" title="デッドカードありのプリフロップだけはボードをサンプリングします。それ以外は常に完全な値です。">精度（デッドありのプリフロップ）</span>
           <div class="segbtns" id="pbtns">
-            <button data-p="1200000" aria-pressed="true">標準</button>
-            <button data-p="6000000" aria-pressed="false">高精度</button>
+            <button data-p="2000" aria-pressed="true">標準</button>
+            <button data-p="10000" aria-pressed="false">高精度</button>
           </div>
         </div>
       </div>
@@ -93,7 +107,7 @@
     <div class="hmhead">
       <div>
         <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
-        <div class="note" style="margin:0">レンジ内の各ハンドに対するヒーローのエクイティ。マスにポインタを合わせると内訳が出ます。</div>
+        <div class="note" style="margin:0" id="hmnote">レンジ内の各ハンドに対するヒーローのエクイティ。マスにポインタを合わせると内訳が出ます。</div>
       </div>
       <div class="legend">
         <div class="legbar" id="legbar"></div>
@@ -107,6 +121,6 @@
     </details>
   </section>
 
-  <p class="foot">完全列挙モードでは残りボードを全通り数え上げるため誤差はありません。モンテカルロモードの数値には95%信頼区間（±）を併記しています。エクイティはチョップを 1/2 として計算しています。</p>
+  <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。デッドカードがあるプリフロップだけはボードをサンプリングし、95%信頼区間（±）を併記します。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <div class="tip" id="tip"></div>

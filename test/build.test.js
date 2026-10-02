@@ -12,7 +12,7 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 for (const out of ['index.html', 'dist/artifact.html']) {
   test(out + ' is built from the current src/', () => {
     const built = read(out);
-    for (const src of ['src/evaluator.js', 'src/equity.js', 'src/preflop.js', 'src/rvr.js', 'src/app.js', 'src/app.css']) {
+    for (const src of ['src/evaluator.js', 'src/preflop.js', 'src/rvr.js', 'src/worker.js', 'src/app.js', 'src/app.css']) {
       assert.ok(built.includes(read(src).trimEnd()),
         out + ' does not contain the current ' + src + ' — run `npm run build`');
     }
@@ -22,6 +22,19 @@ for (const out of ['index.html', 'dist/artifact.html']) {
       out + ' has a stale RANK_ORDER — run `npm run build`');
   });
 }
+
+/* app.js builds the Worker from #engine's text, so that script must hold the
+   whole engine and nothing that touches the DOM. */
+test('the #engine script carries the engine and only the engine', () => {
+  const html = read('index.html');
+  const m = html.match(/<script id="engine">([\s\S]*?)<\/script>/);
+  assert.ok(m, 'index.html has no <script id="engine">');
+  for (const src of ['src/evaluator.js', 'src/preflop.js', 'src/rvr.js', 'src/worker.js']) {
+    assert.ok(m[1].includes(read(src).trimEnd()), src + ' is missing from #engine');
+  }
+  assert.ok(!m[1].includes(read('src/app.js').trimEnd()), 'app.js must not run inside the Worker');
+  assert.ok(!/\bdocument\b|\bwindow\b/.test(m[1]), 'the engine must not touch the DOM');
+});
 
 test('index.html is a complete standalone document', () => {
   const html = read('index.html');

@@ -25,14 +25,19 @@ function preflopTable() {
   return fs.existsSync(p) ? fs.readFileSync(p).toString('base64') : '';
 }
 
-function loadEngine() {
+/* opts.prelude: source run first in the same scope, so a test can stand in for
+   the browser globals a script expects (test/worker.test.js fakes a Worker). */
+function loadEngine(opts = {}) {
   const src = [
+    opts.prelude || '',
     'const RANK_ORDER=' + read('src/rank-order.json').trim() + ';',
     'const PF_TABLE="' + preflopTable() + '";',
     read('src/evaluator.js'),
-    read('src/equity.js'),
     read('src/preflop.js'),
     read('src/rvr.js'),
+    read('src/worker.js'),
+    /* test-only: the original hand-vs-range engine, kept as a cross-check */
+    read('test/reference-equity.js'),
     'return {' + EXPORTS.join(',') + '};',
   ].join('\n');
   return new Function(src)();

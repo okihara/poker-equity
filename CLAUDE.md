@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-NLHE のハンド vs レンジ オールインエクイティ計算ツール。依存ゼロの単一ページアプリ。
+NLHE のハンド vs レンジ / レンジ vs レンジ（ヘッズアップ）オールインエクイティ計算ツール。依存ゼロの単一ページアプリ。
 README.md に計算方式・列挙 vs モンテカルロの閾値表・検証内容が日本語で詳しくまとまっているので、
 アルゴリズムの背景を知りたいときはそちらを先に読むこと。
 
@@ -31,39 +31,50 @@ npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8�
 
 ## src/ にモジュール構文を書かない
 
-`src/evaluator.js` / `src/equity.js` / `src/app.js` は `require` / `import` / `export` を一切持たない
+`src/evaluator.js` / `src/preflop.js` / `src/rvr.js` / `src/worker.js` / `src/app.js` は `require` / `import` / `export` を一切持たない
 プレーンなクラシックスクリプト。ブラウザでは `<script>` 内に連結され、Node では
 `tools/load-engine.js` が `new Function` で同じ順序・同じスコープに読み込む。
 これにより**テストが叩くバイト列と出荷されるバイト列が同一**になる（`build.test.js` が保証）。
 
-- 読み込み順は evaluator → equity → preflop → rvr → app。前段の関数は後段からグローバルとして見える
+- 読み込み順は evaluator → preflop → rvr → worker → app。前段の関数は後段からグローバルとして見える
+- ビルドは evaluator〜worker を `<script id="engine">`、app を別の `<script>` に入れる。`app.js` は `#engine` の
+  テキストから Blob URL で Worker を起動するので、**エンジン側のファイルに DOM（`document` / `window`）を書かない**（テストで検査）
 - エンジン側に新しいグローバルを足してテストから使いたいときは、`tools/load-engine.js` の `EXPORTS` 配列に名前を追加する
 - `PF_TABLE` も同様に `src/preflop-table.bin` を base64 にしてビルドが差し込む。`src/preflop.js` の
   `pfInit` のクラス番号付けを変えると表と食い違うので、その場合は `npm run preflop` で再生成すること
-- `RANK_ORDER` は実行時に JSON を読むのではなく、ビルドが `const RANK_ORDER=[...]` を evaluator の前に差し込む。`src/rank-order.json` を変えたら `npm run build` が必要
+- `RANK_ORDER` は実行時に JSON を読むのではなく、ビルドが `const RANK_ORDER=[...]` を app.js の前に差し込む（UI だけが使うので #engine には入れない）。`src/rank-order.json` を変えたら `npm run build` が必要
 - 外部 `<script src>` の追加はテストで禁止されている（スタイルシートは fonts.googleapis.com のみ許可）
 
 ## 主要な内部表現
 
 - **カード** = `rank<<2 | suit`（0..51）。rank 0..12 = `'23456789TJQKA'`、suit 0..3 = `'cdhs'`
-- **コンボ** = `[card0, card1, weight]`。`weight` は 0..1 の相対値で、エクイティは `Σ w·eq / Σ w`
+- **コンボ** = `[card0, card1, weight]`。`weight` は 0..1 の相対値（各レンジ内で相対）
 - **13×13 グリッド座標** `[i][j]` はインデックス `12 - rank`。`i===j` ペア、`i<j` スーテッド、`i>j` オフスート
   （`cellOf` / `cellName` / `cellCombos` / `NAME2IJ` で相互変換）
 - **ハンド強度** = `eval7()` が返す整数。`Math.floor(v / 0x100000)` がカテゴリ（0 ハイカード 〜 8 ストレートフラッシュ）で、下位ビットがキッカー。大小比較のみが意味を持つ
 
-## computeEquity の呼び出し契約
+## computeRangeEquity の呼び出し契約
 
-`computeEquity(hero, board, rawCombos, opts)` は async。UI をブロックしないために内部で
-`await sleep()` して定期的に制御を返す。`opts` は:
+`computeRangeEquity(rangeA, rangeB, board, dead, opts)` は async。UI は Worker 経由で呼ぶ（`src/worker.js`）が、
+フォールバック時はメインスレッドで動くので、内部で `await sleep()` して約30msごとに制御を返す。
+ハンド vs レンジも、ヒーローを1コンボのレンジにしてこの関数で解く。`opts` は:
 
-- `onProgress(fraction)` — 進捗コールバック
-- `isStale()` — true を返すと計算を中断し `{stale:true}` を返す（入力が変わったときのキャンセル用）
-- `mcTotal` — モンテカルロ時の総サンプル数（UI の「精度」ボタン）
+- `onProgress(fraction, partialEquity)` — 進捗と暫定エクイティ（ランナウトをシャッフル順に回すので偏りのない推定）
+- `isStale()` — true を返すと中断して `{stale:true}` を返す
+- `mcBoards` — デッドカードありのプリフロップでのサンプルボード数（UI の「精度」ボタン）
 
-戻り値は `{equity, win, tie, lose, mode:'exact'|'mc', se, perCombo, ...}` か、
-`{error}`（レンジが全ブロック）か `{stale:true}`。`残りボード通り数 × コンボ数 <= 3e7`（`EXACT_BUDGET`）
-で完全列挙、超えるとコンボ層化モンテカルロに切り替わる。層化しているのはヒートマップの各マスに
-サンプルを行き渡らせるため — 単純なランダム抽出に変えると `perCombo` が壊れる。
+戻り値は `{equity, win, tie, lose, perCombo, opp:{equity, win, tie, lose, perCombo}, mode:'exact'|'mc', se, nRunouts, nCombos, nCombosOpp}`
+か `{error}` か `{stale:true}`。`perCombo` の各要素は `{a, b, w, eq, share}` で、`share` はそのコンボが占める
+対戦の重み（Σ share = 1、Σ share·eq = equity）。ブロッカーでコンボごとの相手の重みが変わるので、
+集計には `w` ではなく `share` を使うこと。
+
+- ボード 3〜5枚: 全ランナウトのスイープ（ランナウトごとの率を平均せず、分子・分母を合計する）
+- ボード 0枚・デッドなし: `pfInit()` の表引き
+- ボード 0枚・デッドあり: ボード単位のモンテカルロ（`se` は比推定量の標準誤差）
+- ボード 1〜2枚は非対応（`{error}`）
+
+旧エンジン `computeEquity`（ハンド vs レンジ）は `test/reference-equity.js` に移してあり、出荷しない。
+`tools/load-engine.js` がテスト用に同じスコープへ読み込み、新エンジンの交差検証に使っている。
 
 ## 配色
 
