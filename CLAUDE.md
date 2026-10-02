@@ -14,6 +14,7 @@ npm test        # 全テスト（約10秒）
 npm run check   # build してから test
 npm run rank    # src/rank-order.json を再計算（約40秒、シード固定で再現可能）
 npm run bench   # 評価器などのスループット計測（タイミングはテストに入れない方針）
+npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8コア）
 ```
 
 単一テストファイル: `node --test test/equity.test.js`
@@ -35,8 +36,10 @@ npm run bench   # 評価器などのスループット計測（タイミング�
 `tools/load-engine.js` が `new Function` で同じ順序・同じスコープに読み込む。
 これにより**テストが叩くバイト列と出荷されるバイト列が同一**になる（`build.test.js` が保証）。
 
-- 読み込み順は evaluator → equity → app。前段の関数は後段からグローバルとして見える
+- 読み込み順は evaluator → equity → preflop → rvr → app。前段の関数は後段からグローバルとして見える
 - エンジン側に新しいグローバルを足してテストから使いたいときは、`tools/load-engine.js` の `EXPORTS` 配列に名前を追加する
+- `PF_TABLE` も同様に `src/preflop-table.bin` を base64 にしてビルドが差し込む。`src/preflop.js` の
+  `pfInit` のクラス番号付けを変えると表と食い違うので、その場合は `npm run preflop` で再生成すること
 - `RANK_ORDER` は実行時に JSON を読むのではなく、ビルドが `const RANK_ORDER=[...]` を evaluator の前に差し込む。`src/rank-order.json` を変えたら `npm run build` が必要
 - 外部 `<script src>` の追加はテストで禁止されている（スタイルシートは fonts.googleapis.com のみ許可）
 

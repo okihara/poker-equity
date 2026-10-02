@@ -6,11 +6,12 @@
  *   dist/artifact.html  body-only fragment for the Claude Artifact platform,
  *                       which supplies its own doctype/head/body wrapper
  *
- * Both embed the exact bytes of src/evaluator.js, src/equity.js and src/rvr.js, so what the
+ * Both embed the exact bytes of the engine scripts in src/ and of the preflop table, so what the
  * tests exercise is what ships. test/build.test.js enforces that.
  */
 const fs = require('fs');
 const path = require('path');
+const { preflopTable } = require('./load-engine.js');
 const root = path.join(__dirname, '..');
 const R = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const W = (p, s) => { fs.mkdirSync(path.dirname(path.join(root, p)), { recursive: true }); fs.writeFileSync(path.join(root, p), s); };
@@ -22,18 +23,26 @@ const parts = {
   rank: R('src/rank-order.json').trim(),
   evaluator: R('src/evaluator.js').trimEnd(),
   equity: R('src/equity.js').trimEnd(),
+  preflop: R('src/preflop.js').trimEnd(),
   rvr: R('src/rvr.js').trimEnd(),
   app: R('src/app.js').trimEnd(),
 };
+
+const table = preflopTable();
+if (!table) throw new Error('src/preflop-table.bin is missing — run `npm run preflop` first');
 
 const script = [
   '<script>',
   '/* RANK_ORDER is generated from src/rank-order.json by tools/build.js */',
   'const RANK_ORDER=' + parts.rank + ';',
+  '/* PF_TABLE is src/preflop-table.bin, base64 */',
+  'const PF_TABLE="' + table + '";',
   '',
   parts.evaluator,
   '',
   parts.equity,
+  '',
+  parts.preflop,
   '',
   parts.rvr,
   '',

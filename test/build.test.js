@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const { preflopTable } = require('../tools/load-engine.js');
 
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
@@ -11,10 +12,12 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 for (const out of ['index.html', 'dist/artifact.html']) {
   test(out + ' is built from the current src/', () => {
     const built = read(out);
-    for (const src of ['src/evaluator.js', 'src/equity.js', 'src/rvr.js', 'src/app.js', 'src/app.css']) {
+    for (const src of ['src/evaluator.js', 'src/equity.js', 'src/preflop.js', 'src/rvr.js', 'src/app.js', 'src/app.css']) {
       assert.ok(built.includes(read(src).trimEnd()),
         out + ' does not contain the current ' + src + ' — run `npm run build`');
     }
+    assert.ok(built.includes('const PF_TABLE="' + preflopTable() + '";'),
+      out + ' has a stale PF_TABLE — run `npm run build`');
     assert.ok(built.includes('const RANK_ORDER=' + read('src/rank-order.json').trim() + ';'),
       out + ' has a stale RANK_ORDER — run `npm run build`');
   });
