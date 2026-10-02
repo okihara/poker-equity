@@ -48,9 +48,7 @@
           <div class="slotrow" id="deadSlots"></div>
         </div>
       </div>
-      <div class="lbl" style="margin-bottom:7px">カードを選ぶ</div>
-      <div class="picker" id="picker"></div>
-      <div class="note">枠をクリックしてから下のカードを選びます。埋まると自動で次の枠に進みます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</div>
+      <div class="note">枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進み、埋まったカードの枠をクリックすると差し替えられます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</div>
     </section>
 
     <section class="panel" aria-labelledby="h-range">
@@ -124,3 +122,12 @@
   <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。デッドカードがあるプリフロップだけはボードをサンプリングし、95%信頼区間（±）を併記します。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <div class="tip" id="tip"></div>
+<dialog class="pickdlg" id="pickdlg" aria-labelledby="pickttl">
+  <div class="pickhd">
+    <div class="pickttl" id="pickttl"></div>
+    <button class="tbtn" id="pickRemove" type="button">このカードを外す</button>
+    <button class="tbtn" id="pickClose" type="button">閉じる</button>
+  </div>
+  <div class="picker" id="picker"></div>
+  <div class="note" id="picknote"></div>
+</dialog>

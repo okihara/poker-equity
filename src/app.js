@@ -38,7 +38,7 @@ const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 /* ================= state ================= */
 /* mode 'hand': hero's two cards vs ranges[1]. mode 'range': ranges[0] vs
    ranges[1]. The grid edits ranges[side]; cellW always points at that one. */
-let hero=[], board=[], dead=[], activeSlot={kind:'hero',i:0};
+let hero=[], board=[], dead=[], activeSlot=null; // the slot the open picker fills
 let mode='hand', side=1;
 const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
 const ranges=[newRange(),newRange()];
@@ -60,9 +60,7 @@ function buildSlots(){
 function mkSlot(kind,i){
   const b=document.createElement('button');b.className='slot';b.dataset.kind=kind;b.dataset.i=i;
   b.type='button';b.setAttribute('aria-label',SLOTS[kind].label+(i+1)+'枚目');
-  b.addEventListener('click',()=>{const arr=cardsOf(kind);
-    if(arr[i]!==undefined){arr.splice(i,1);}
-    activeSlot={kind,i:Math.min(i,arr.length)};render();schedule();});
+  b.addEventListener('click',()=>openPicker(kind,i));
   return b;
 }
 function paintSlot(el,card,active){
@@ -82,15 +80,28 @@ function buildPicker(){
   }
 }
 function pickCard(c){
-  if(usedCards().has(c))return;
-  const {kind,i}=activeSlot;
-  const arr=cardsOf(kind), cap=SLOTS[kind].cap;
-  if(i<arr.length)arr[i]=c; else if(arr.length<cap)arr.push(c); else return;
-  if(kind==='hero'&&hero.length<2)activeSlot={kind:'hero',i:hero.length};
-  else if(kind==='hero')activeSlot={kind:'board',i:board.length};
-  else activeSlot={kind,i:Math.min(arr.length,cap-1)};
-  render();schedule();
+  if(!activeSlot||usedCards().has(c))return;
+  const {kind,i}=activeSlot,arr=cardsOf(kind),cap=SLOTS[kind].cap,replace=i<arr.length;
+  if(replace)arr[i]=c;else if(arr.length<cap)arr.push(c);else return;
+  schedule();
+  /* filling empty slots walks on to the next one; a swap, or a full row, is done */
+  if(replace||arr.length>=cap){closePicker();return;}
+  activeSlot={kind,i:arr.length};render();
 }
+/* ---- card picker dialog ---- */
+const dlg=$('pickdlg');
+function openPicker(kind,i){activeSlot={kind,i:Math.min(i,cardsOf(kind).length)};render();if(!dlg.open)dlg.showModal();}
+/* 'close' fires a task later; drop the target now so no click lands in between */
+function closePicker(){activeSlot=null;if(dlg.open)dlg.close();render();}
+dlg.addEventListener('close',()=>{activeSlot=null;render();});
+/* A backdrop click lands on the dialog element itself, but so does a click on
+   its padding, hence the rectangle test. Only for clicks on the dialog: a
+   button pressed with Enter/Space reports a click at (0,0), which is outside. */
+dlg.addEventListener('click',e=>{if(e.target!==dlg)return;const r=dlg.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePicker();});
+$('pickClose').addEventListener('click',closePicker);
+$('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
+  cardsOf(activeSlot.kind).splice(activeSlot.i,1);schedule();closePicker();});
 const hmCells=[];
 function buildGrids(){
   rgrid.innerHTML='';hmEl.innerHTML='';
@@ -203,11 +214,18 @@ function buildPresets(){
 
 /* ---- render ---- */
 function render(){
-  for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],activeSlot.kind==='hero'&&activeSlot.i===i);
-  for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],activeSlot.kind==='board'&&activeSlot.i===i);
-  for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],activeSlot.kind==='dead'&&activeSlot.i===i);
-  const used=usedCards();
-  for(const b of picker.children)b.disabled=used.has(+b.dataset.c);
+  const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
+  for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
+  for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
+  for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
+  if(!activeSlot)return;
+  const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
+  for(const b of picker.children){const c=+b.dataset.c;b.disabled=used.has(c);b.classList.toggle('cur',c===cur);}
+  $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!==undefined?'を差し替え':'')+
+    (arr.length?' <span class="sub">'+handStr(arr)+'</span>':'');
+  $('pickRemove').hidden=cur===undefined;
+  $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':
+    kind==='dead'?'デッドは誰の手にもボードにも来ないカード（最大4枚）。':'';
 }
 /* Hero's cards only count in hand mode; in range mode they are hidden and ignored. */
 function usedCards(){return new Set([...(mode==='hand'?hero:[]),...board,...dead]);}
@@ -376,7 +394,6 @@ function setMode(m){
   $('heroGrp').hidden=m!=='hand';$('sbtns').hidden=m==='hand';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.filter(c=>!u.has(c));}
-  if(m!=='hand'&&activeSlot.kind==='hero')activeSlot={kind:'board',i:board.length};
   lastRes=null;
   /* an empty hero range would only produce a prompt; open it for editing instead */
   const empty=w=>w.every(r=>r.every(x=>!x));
@@ -393,9 +410,9 @@ $('wbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
   paintW=+b.dataset.w;pressed($('wbtns'),b);});
 $('pbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   precision=+b.dataset.p;pressed($('pbtns'),b);schedule();});
-$('clrHero').addEventListener('click',()=>{hero=[];activeSlot={kind:'hero',i:0};render();schedule();});
-$('clrBoard').addEventListener('click',()=>{board=[];activeSlot={kind:'board',i:0};render();schedule();});
-$('clrDead').addEventListener('click',()=>{dead=[];activeSlot={kind:'dead',i:0};render();schedule();});
+$('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
+$('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
+$('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
 $('clrRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(0);repaintAll();syncText();schedule();});
 $('allRange').addEventListener('click',()=>{for(let i=0;i<13;i++)cellW[i].fill(1);repaintAll();syncText();schedule();});
 $('applyText').addEventListener('click',()=>{applyText();syncText();});
@@ -408,6 +425,4 @@ if(!load()){
 }else{
   pressed($('pbtns'),$('pbtns').querySelector('[data-p="'+precision+'"]'));
 }
-activeSlot={kind:'hero',i:hero.length<2?hero.length:0};
-if(hero.length>=2||mode==='range')activeSlot={kind:'board',i:board.length};
 setMode(mode);run();

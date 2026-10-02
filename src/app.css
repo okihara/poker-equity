@@ -87,6 +87,12 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .pc .r{font-weight:700;letter-spacing:-.02em}
 .pc:disabled{opacity:.22;cursor:not-allowed}
 .pc:not(:disabled):hover{background:var(--surface-3);border-color:var(--line-2)}
+.pc.cur{opacity:1;border-color:var(--hero);box-shadow:0 0 0 2px var(--hero-soft)}
+.pickdlg{width:min(640px,calc(100vw - 32px));max-width:none;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.pickdlg::backdrop{background:rgba(14,22,32,.38)}
+.pickhd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.pickttl{margin-right:auto;font-size:14px;font-weight:600;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pickttl .sub{font-size:12px;font-weight:500;color:var(--ink-3)}
 .sp{color:var(--spade)}.he{color:var(--heart)}.di{color:var(--diamond)}.cl{color:var(--club)}
 
 /* ---- range grid ---- */
