@@ -288,7 +288,7 @@ function schedule(){clearTimeout(timer);timer=setTimeout(run,180);}
    when this run superseded one that was still in flight. */
 function clearResult(msg){
   lastRes=null;
-  $('eqv').textContent='–';$('eqse').textContent='';$('eqv').parentNode.classList.remove('interim');
+  $('eqv').textContent='–';$('eqse').textContent='';$('eqv').parentNode.classList.remove('interim');$('precBtn').hidden=true;
   for(const id of ['segW','segT','segL']){const e=$(id);e.style.width='0';e.textContent='';}
   $('kw').textContent='–';$('kt').textContent='–';$('kl').textContent='–';
   $('chips').innerHTML='';$('matchup').innerHTML=msg;
@@ -320,6 +320,9 @@ async function run(){
 function showResult(r){
   $('eqv').textContent=(r.equity*100).toFixed(2);
   $('eqse').textContent=r.se>0?'± '+(r.se*196).toFixed(2):'完全列挙';
+  /* only a sampled result (preflop with dead cards) has a precision to change */
+  $('precBtn').hidden=r.mode!=='mc';
+  $('precBtn').textContent=precision>2000?'標準精度に戻す':'高精度で再計算（約5倍の時間）';
   const pct=x=>(x*100).toFixed(1)+'%';
   $('segW').style.width=(r.win*100)+'%';$('segT').style.width=(r.tie*100)+'%';$('segL').style.width=(r.lose*100)+'%';
   $('segW').textContent=r.win>0.1?pct(r.win):'';
@@ -429,8 +432,7 @@ function setMode(m){
 $('mbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.m===mode)return;
   setMode(b.dataset.m);schedule();});
 $('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setHmSide(+b.dataset.s);save();});
-$('pbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  precision=+b.dataset.p;pressed($('pbtns'),b);schedule();});
+$('precBtn').addEventListener('click',()=>{precision=precision>2000?2000:10000;$('precBtn').hidden=true;run();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
 $('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
@@ -440,7 +442,5 @@ refreshPalette();buildSlots();buildPicker();buildPanels();buildHeatGrid();drawLe
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
   selectTopPct(RP[1],15);
-}else{
-  pressed($('pbtns'),$('pbtns').querySelector('[data-p="'+precision+'"]'));
 }
 setMode(mode);run();

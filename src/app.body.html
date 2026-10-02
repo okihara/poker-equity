@@ -11,6 +11,7 @@
     <div class="res">
       <div>
         <div class="bignum"><span class="v" id="eqv">–</span><span class="pct">%</span><span class="pm" id="eqse"></span></div>
+        <button class="tbtn precbtn" id="precBtn" type="button" hidden></button>
       </div>
       <div>
         <div class="matchup" id="matchup"></div>
@@ -42,13 +43,6 @@
         <div class="grp">
           <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
           <div class="slotrow" id="deadSlots"></div>
-        </div>
-        <div class="grp">
-          <span class="lbl" title="デッドカードありのプリフロップだけはボードをサンプリングします。それ以外は常に完全な値です。">精度（デッドありのプリフロップ）</span>
-          <div class="segbtns" id="pbtns">
-            <button data-p="2000" aria-pressed="true">標準</button>
-            <button data-p="10000" aria-pressed="false">高精度</button>
-          </div>
         </div>
       </div>
       <details class="tips">
