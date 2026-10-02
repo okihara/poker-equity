@@ -112,9 +112,16 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .pc:disabled{opacity:.22;cursor:not-allowed}
 .pc:not(:disabled):hover{background:var(--surface-3);border-color:var(--line-2)}
 .pc.cur{opacity:1;border-color:var(--hero);box-shadow:0 0 0 2px var(--hero-soft)}
-.pickdlg{width:min(640px,calc(100vw - 32px));max-width:none;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
-.pickdlg::backdrop{background:rgba(14,22,32,.38)}
-.pickhd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dlg{width:min(640px,calc(100vw - 32px));max-width:none;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.dlg::backdrop{background:rgba(14,22,32,.38)}
+.dlghd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dlgttl{margin-right:auto;font-size:15px;font-weight:700}
+.helpdlg{max-height:calc(100vh - 32px)}
+.helpbody h3{font-size:12px;font-weight:600;color:var(--ink-2);margin:12px 0 4px}
+.helpbody h3:first-child{margin-top:0}
+.helpbody ul{margin:0;padding-left:1.2em;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
+.helpbody code{font-family:var(--ff-num);font-size:11.5px}
+.hdact{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pickttl{margin-right:auto;font-size:14px;font-weight:600;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
 .pickttl .sub{font-size:12px;font-weight:500;color:var(--ink-3)}
 .sp{color:var(--spade)}.he{color:var(--heart)}.di{color:var(--diamond)}.cl{color:var(--club)}
@@ -169,13 +176,6 @@ table{border-collapse:collapse;font-family:var(--ff-num);font-size:11.5px;font-v
 th,td{text-align:right;padding:4px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{color:var(--ink-3);font-weight:600;text-align:right}
 th:first-child,td:first-child{text-align:left}
-.tips{margin-top:8px}
-.tips summary{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.1em;color:var(--ink-3);list-style:none;padding:2px 0}
-.tips summary::-webkit-details-marker{display:none}
-.tips summary::before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .12s}
-.tips[open] summary::before{transform:rotate(45deg)}
-.tips summary:hover{color:var(--ink-2)}
-.tips ul{margin:6px 0 0;padding-left:1.2em;font-size:11px;color:var(--ink-3);line-height:1.6}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
@@ -186,9 +186,12 @@ th:first-child,td:first-child{text-align:left}
 <div class="wrap">
   <header class="hd">
     <h1 id="title">ハンド vs レンジ エクイティ</h1>
-    <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
-      <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
-      <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+    <div class="hdact">
+      <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
+        <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
+        <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+      </div>
+      <button class="tbtn" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
     </div>
   </header>
 
@@ -230,15 +233,6 @@ th:first-child,td:first-child{text-align:left}
           <div class="slotrow" id="deadSlots"></div>
         </div>
       </div>
-      <details class="tips">
-        <summary>TIPS</summary>
-        <ul>
-          <li>枠（ヒーローのハンドも同じ）をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
-          <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
-          <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
-          <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
-        </ul>
-      </details>
     </section>
 
     <!-- One range editor; app.js clones it into the hero panel (#rp0), where the
@@ -283,13 +277,6 @@ th:first-child,td:first-child{text-align:left}
           <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
         </div>
       </div>
-      <details class="tips">
-        <summary>TIPS</summary>
-        <ul>
-          <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
-          <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
-        </ul>
-      </details>
     </section>
   </div>
 
@@ -315,20 +302,47 @@ th:first-child,td:first-child{text-align:left}
       <summary>表で見る</summary>
       <div class="tblwrap"><table id="tbl"><thead><tr><th>ハンド</th><th>エクイティ</th><th>コンボ</th><th>ウェイト</th></tr></thead><tbody></tbody></table></div>
     </details>
-    <details class="tips">
-      <summary>TIPS</summary>
-      <ul>
-        <li>マスにポインタを合わせると、エクイティ・コンボ数・ウェイトの内訳が出ます。</li>
-        <li>レンジ vs レンジでは、見出し横のボタンで表示するレンジを切り替えます。色は常にヒーロー視点です。</li>
-      </ul>
-    </details>
   </section>
 
   <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。デッドカードがあるプリフロップだけはボードをサンプリングし、95%信頼区間（±）を併記します。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <div class="tip" id="tip"></div>
-<dialog class="pickdlg" id="pickdlg" aria-labelledby="pickttl">
-  <div class="pickhd">
+<dialog class="dlg helpdlg" id="helpdlg" aria-labelledby="helpttl">
+  <div class="dlghd">
+    <h2 class="dlgttl" id="helpttl">ヘルプ</h2>
+    <button class="tbtn" id="helpClose" type="button">閉じる</button>
+  </div>
+  <div class="helpbody">
+    <h3>モード</h3>
+    <ul>
+      <li>右上で「ハンド vs レンジ」と「レンジ vs レンジ」（どちらもヘッズアップ）を切り替えます。</li>
+      <li>ヒーロー欄は、ハンド vs レンジなら2枚のハンド、レンジ vs レンジならレンジの入力になります。</li>
+    </ul>
+    <h3>カード（ボード・デッド・ヒーローのハンド）</h3>
+    <ul>
+      <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
+      <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
+      <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
+      <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
+    </ul>
+    <h3>レンジ</h3>
+    <ul>
+      <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
+      <li>「塗るウェイト」を下げると部分的なレンジになります。マスの塗りの高さがウェイトです。</li>
+      <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
+      <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
+    </ul>
+    <h3>結果とハンド別エクイティ</h3>
+    <ul>
+      <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。</li>
+      <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
+      <li>デッドカードがあるプリフロップだけはボードをサンプリングします。結果欄の「高精度で再計算」で誤差を小さくできます。</li>
+    </ul>
+  </div>
+</dialog>
+<dialog class="dlg pickdlg" id="pickdlg" aria-labelledby="pickttl">
+  <div class="dlghd">
     <div class="pickttl" id="pickttl"></div>
     <button class="tbtn" id="pickRemove" type="button">このカードを外す</button>
     <button class="tbtn" id="pickClose" type="button">閉じる</button>
@@ -678,16 +692,22 @@ dlg.addEventListener('close',()=>{activeSlot=null;render();});
 /* A backdrop click lands on the dialog element itself, but so does a click on
    its padding, hence the rectangle test. Only for clicks on the dialog: a
    button pressed with Enter/Space reports a click at (0,0), which is outside. */
-dlg.addEventListener('click',e=>{if(e.target!==dlg)return;const r=dlg.getBoundingClientRect();
-  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePicker();});
+function onBackdrop(d,close){d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();});}
+onBackdrop(dlg,closePicker);
 $('pickClose').addEventListener('click',closePicker);
+/* ---- help dialog ---- */
+const help=$('helpdlg'),closeHelp=()=>help.close();
+onBackdrop(help,closeHelp);
+$('helpClose').addEventListener('click',closeHelp);
+$('helpBtn').addEventListener('click',()=>help.showModal());
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
   cardsOf(activeSlot.kind).splice(activeSlot.i,1);schedule();closePicker();});
 /* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
 const RP=[];
 function buildPanels(){
   const v=$('rp1'),h=v.cloneNode(true);
-  h.id='rp0';h.dataset.k='0';h.querySelector('.tips').remove();
+  h.id='rp0';h.dataset.k='0';
   h.insertBefore($('heroGrp'),h.querySelector('.reditor'));
   v.parentNode.insertBefore(h,v);
   for(const el of [h,v]){

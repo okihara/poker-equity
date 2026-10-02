@@ -95,16 +95,22 @@ dlg.addEventListener('close',()=>{activeSlot=null;render();});
 /* A backdrop click lands on the dialog element itself, but so does a click on
    its padding, hence the rectangle test. Only for clicks on the dialog: a
    button pressed with Enter/Space reports a click at (0,0), which is outside. */
-dlg.addEventListener('click',e=>{if(e.target!==dlg)return;const r=dlg.getBoundingClientRect();
-  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closePicker();});
+function onBackdrop(d,close){d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();
+  if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();});}
+onBackdrop(dlg,closePicker);
 $('pickClose').addEventListener('click',closePicker);
+/* ---- help dialog ---- */
+const help=$('helpdlg'),closeHelp=()=>help.close();
+onBackdrop(help,closeHelp);
+$('helpClose').addEventListener('click',closeHelp);
+$('helpBtn').addEventListener('click',()=>help.showModal());
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
   cardsOf(activeSlot.kind).splice(activeSlot.i,1);schedule();closePicker();});
 /* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
 const RP=[];
 function buildPanels(){
   const v=$('rp1'),h=v.cloneNode(true);
-  h.id='rp0';h.dataset.k='0';h.querySelector('.tips').remove();
+  h.id='rp0';h.dataset.k='0';
   h.insertBefore($('heroGrp'),h.querySelector('.reditor'));
   v.parentNode.insertBefore(h,v);
   for(const el of [h,v]){

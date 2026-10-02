@@ -1,9 +1,12 @@
 <div class="wrap">
   <header class="hd">
     <h1 id="title">ハンド vs レンジ エクイティ</h1>
-    <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
-      <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
-      <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+    <div class="hdact">
+      <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
+        <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
+        <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+      </div>
+      <button class="tbtn" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
     </div>
   </header>
 
@@ -45,15 +48,6 @@
           <div class="slotrow" id="deadSlots"></div>
         </div>
       </div>
-      <details class="tips">
-        <summary>TIPS</summary>
-        <ul>
-          <li>枠（ヒーローのハンドも同じ）をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
-          <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
-          <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
-          <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
-        </ul>
-      </details>
     </section>
 
     <!-- One range editor; app.js clones it into the hero panel (#rp0), where the
@@ -98,13 +92,6 @@
           <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
         </div>
       </div>
-      <details class="tips">
-        <summary>TIPS</summary>
-        <ul>
-          <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
-          <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
-        </ul>
-      </details>
     </section>
   </div>
 
@@ -130,20 +117,47 @@
       <summary>表で見る</summary>
       <div class="tblwrap"><table id="tbl"><thead><tr><th>ハンド</th><th>エクイティ</th><th>コンボ</th><th>ウェイト</th></tr></thead><tbody></tbody></table></div>
     </details>
-    <details class="tips">
-      <summary>TIPS</summary>
-      <ul>
-        <li>マスにポインタを合わせると、エクイティ・コンボ数・ウェイトの内訳が出ます。</li>
-        <li>レンジ vs レンジでは、見出し横のボタンで表示するレンジを切り替えます。色は常にヒーロー視点です。</li>
-      </ul>
-    </details>
   </section>
 
   <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。デッドカードがあるプリフロップだけはボードをサンプリングし、95%信頼区間（±）を併記します。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <div class="tip" id="tip"></div>
-<dialog class="pickdlg" id="pickdlg" aria-labelledby="pickttl">
-  <div class="pickhd">
+<dialog class="dlg helpdlg" id="helpdlg" aria-labelledby="helpttl">
+  <div class="dlghd">
+    <h2 class="dlgttl" id="helpttl">ヘルプ</h2>
+    <button class="tbtn" id="helpClose" type="button">閉じる</button>
+  </div>
+  <div class="helpbody">
+    <h3>モード</h3>
+    <ul>
+      <li>右上で「ハンド vs レンジ」と「レンジ vs レンジ」（どちらもヘッズアップ）を切り替えます。</li>
+      <li>ヒーロー欄は、ハンド vs レンジなら2枚のハンド、レンジ vs レンジならレンジの入力になります。</li>
+    </ul>
+    <h3>カード（ボード・デッド・ヒーローのハンド）</h3>
+    <ul>
+      <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
+      <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
+      <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
+      <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
+    </ul>
+    <h3>レンジ</h3>
+    <ul>
+      <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
+      <li>「塗るウェイト」を下げると部分的なレンジになります。マスの塗りの高さがウェイトです。</li>
+      <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
+      <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
+    </ul>
+    <h3>結果とハンド別エクイティ</h3>
+    <ul>
+      <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。</li>
+      <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
+      <li>デッドカードがあるプリフロップだけはボードをサンプリングします。結果欄の「高精度で再計算」で誤差を小さくできます。</li>
+    </ul>
+  </div>
+</dialog>
+<dialog class="dlg pickdlg" id="pickdlg" aria-labelledby="pickttl">
+  <div class="dlghd">
     <div class="pickttl" id="pickttl"></div>
     <button class="tbtn" id="pickRemove" type="button">このカードを外す</button>
     <button class="tbtn" id="pickClose" type="button">閉じる</button>
