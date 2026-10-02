@@ -381,8 +381,7 @@ function setSide(s){
   side=mode==='hand'?1:s;cellW=ranges[side];
   pressed($('sbtns'),$('sbtns').children[side]);
   $('h-range').textContent=mode==='hand'?'相手のレンジ':'レンジ';
-  $('hmnote').textContent=(side?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。')+
-    'マスにポインタを合わせると内訳が出ます。';
+  $('hmnote').textContent=side?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
   for(const r of cellEq)r.fill(-1);
   if(lastRes)drawHeat(lastRes);else clearHeat();
   repaintAll();syncText();

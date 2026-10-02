@@ -48,7 +48,15 @@
           <div class="slotrow" id="deadSlots"></div>
         </div>
       </div>
-      <div class="note">枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進み、埋まったカードの枠をクリックすると差し替えられます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</div>
+      <details class="tips">
+        <summary>TIPS</summary>
+        <ul>
+          <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
+          <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
+          <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
+          <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
+        </ul>
+      </details>
     </section>
 
     <section class="panel" aria-labelledby="h-range">
@@ -97,7 +105,14 @@
         <button class="tbtn" id="applyText">テキストを適用</button>
         <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
       </div>
-      <div class="note">ドラッグで連続選択できます。選択済みのマスから始めると消去になります。「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</div>
+      <details class="tips">
+        <summary>TIPS</summary>
+        <ul>
+          <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
+          <li>レンジ vs レンジでは、右上の「ヒーロー / 相手」で編集するレンジを切り替えます。</li>
+          <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
+        </ul>
+      </details>
     </section>
   </div>
 
@@ -105,7 +120,7 @@
     <div class="hmhead">
       <div>
         <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
-        <div class="note" style="margin:0" id="hmnote">レンジ内の各ハンドに対するヒーローのエクイティ。マスにポインタを合わせると内訳が出ます。</div>
+        <div class="note" style="margin:0" id="hmnote">相手のレンジの各ハンドに対するヒーローのエクイティ。</div>
       </div>
       <div class="legend">
         <div class="legbar" id="legbar"></div>
@@ -116,6 +131,13 @@
     <details>
       <summary>表で見る</summary>
       <div class="tblwrap"><table id="tbl"><thead><tr><th>ハンド</th><th>エクイティ</th><th>コンボ</th><th>ウェイト</th></tr></thead><tbody></tbody></table></div>
+    </details>
+    <details class="tips">
+      <summary>TIPS</summary>
+      <ul>
+        <li>マスにポインタを合わせると、エクイティ・コンボ数・ウェイトの内訳が出ます。</li>
+        <li>レンジ vs レンジでは、編集中のレンジ（ヒーロー / 相手）のハンド別エクイティを表示します。色は常にヒーロー視点です。</li>
+      </ul>
     </details>
   </section>
 

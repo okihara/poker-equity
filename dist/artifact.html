@@ -149,6 +149,13 @@ table{border-collapse:collapse;font-family:var(--ff-num);font-size:11.5px;font-v
 th,td{text-align:right;padding:4px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{color:var(--ink-3);font-weight:600;text-align:right}
 th:first-child,td:first-child{text-align:left}
+.tips{margin-top:8px}
+.tips summary{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.1em;color:var(--ink-3);list-style:none;padding:2px 0}
+.tips summary::-webkit-details-marker{display:none}
+.tips summary::before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .12s}
+.tips[open] summary::before{transform:rotate(45deg)}
+.tips summary:hover{color:var(--ink-2)}
+.tips ul{margin:6px 0 0;padding-left:1.2em;font-size:11px;color:var(--ink-3);line-height:1.6}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
 </style>
@@ -203,7 +210,15 @@ th:first-child,td:first-child{text-align:left}
           <div class="slotrow" id="deadSlots"></div>
         </div>
       </div>
-      <div class="note">枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進み、埋まったカードの枠をクリックすると差し替えられます。ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</div>
+      <details class="tips">
+        <summary>TIPS</summary>
+        <ul>
+          <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
+          <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
+          <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
+          <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
+        </ul>
+      </details>
     </section>
 
     <section class="panel" aria-labelledby="h-range">
@@ -252,7 +267,14 @@ th:first-child,td:first-child{text-align:left}
         <button class="tbtn" id="applyText">テキストを適用</button>
         <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
       </div>
-      <div class="note">ドラッグで連続選択できます。選択済みのマスから始めると消去になります。「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</div>
+      <details class="tips">
+        <summary>TIPS</summary>
+        <ul>
+          <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
+          <li>レンジ vs レンジでは、右上の「ヒーロー / 相手」で編集するレンジを切り替えます。</li>
+          <li>「上位n%」の順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
+        </ul>
+      </details>
     </section>
   </div>
 
@@ -260,7 +282,7 @@ th:first-child,td:first-child{text-align:left}
     <div class="hmhead">
       <div>
         <h2 id="h-hm" class="seclabel">ハンド別エクイティ</h2>
-        <div class="note" style="margin:0" id="hmnote">レンジ内の各ハンドに対するヒーローのエクイティ。マスにポインタを合わせると内訳が出ます。</div>
+        <div class="note" style="margin:0" id="hmnote">相手のレンジの各ハンドに対するヒーローのエクイティ。</div>
       </div>
       <div class="legend">
         <div class="legbar" id="legbar"></div>
@@ -271,6 +293,13 @@ th:first-child,td:first-child{text-align:left}
     <details>
       <summary>表で見る</summary>
       <div class="tblwrap"><table id="tbl"><thead><tr><th>ハンド</th><th>エクイティ</th><th>コンボ</th><th>ウェイト</th></tr></thead><tbody></tbody></table></div>
+    </details>
+    <details class="tips">
+      <summary>TIPS</summary>
+      <ul>
+        <li>マスにポインタを合わせると、エクイティ・コンボ数・ウェイトの内訳が出ます。</li>
+        <li>レンジ vs レンジでは、編集中のレンジ（ヒーロー / 相手）のハンド別エクイティを表示します。色は常にヒーロー視点です。</li>
+      </ul>
     </details>
   </section>
 
@@ -914,8 +943,7 @@ function setSide(s){
   side=mode==='hand'?1:s;cellW=ranges[side];
   pressed($('sbtns'),$('sbtns').children[side]);
   $('h-range').textContent=mode==='hand'?'相手のレンジ':'レンジ';
-  $('hmnote').textContent=(side?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。')+
-    'マスにポインタを合わせると内訳が出ます。';
+  $('hmnote').textContent=side?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
   for(const r of cellEq)r.fill(-1);
   if(lastRes)drawHeat(lastRes);else clearHeat();
   repaintAll();syncText();

@@ -145,5 +145,12 @@ table{border-collapse:collapse;font-family:var(--ff-num);font-size:11.5px;font-v
 th,td{text-align:right;padding:4px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{color:var(--ink-3);font-weight:600;text-align:right}
 th:first-child,td:first-child{text-align:left}
+.tips{margin-top:8px}
+.tips summary{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;letter-spacing:.1em;color:var(--ink-3);list-style:none;padding:2px 0}
+.tips summary::-webkit-details-marker{display:none}
+.tips summary::before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .12s}
+.tips[open] summary::before{transform:rotate(45deg)}
+.tips summary:hover{color:var(--ink-2)}
+.tips ul{margin:6px 0 0;padding-left:1.2em;font-size:11px;color:var(--ink-3);line-height:1.6}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
