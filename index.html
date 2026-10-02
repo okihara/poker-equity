@@ -39,8 +39,16 @@ button{font:inherit;color:inherit;cursor:pointer}
 .hmtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .hmtitle h2.seclabel{margin:0}
 /* range mode: hand and board across the top, then hero's range and villain's */
-@media(min-width:960px){.cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
-.cols.rvr>.panel:first-child{grid-column:1/-1}
+/* hand mode: hero's hand, board, villain's range; wide: hand over board on the
+   left, villain's range on the right. Range mode: board across the top, then
+   hero's range and villain's. */
+.cols{grid-template-areas:"hero" "board" "villain"}
+.cols.rvr{grid-template-areas:"board" "hero" "villain"}
+#rp0{grid-area:hero}#boardPanel{grid-area:board}#rp1{grid-area:villain}
+@media(min-width:960px){
+  .cols{grid-template-rows:auto 1fr;grid-template-areas:"hero villain" "board villain"}
+  .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"board board" "hero villain"}
+}
 .bignum.interim .v,.bignum.interim .pct{opacity:.5}
 h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-height:1.15}
 
@@ -209,13 +217,9 @@ th:first-child,td:first-child{text-align:left}
   </section>
 
   <div class="cols" id="cols">
-    <section class="panel" aria-labelledby="h-hand">
-      <h2 id="h-hand">ハンドとボード</h2>
+    <section class="panel" id="boardPanel" aria-labelledby="h-board">
+      <h2 id="h-board">ボードとデッド</h2>
       <div class="slots">
-        <div class="grp" id="heroGrp">
-          <div class="grphd"><span class="lbl">ヒーロー</span><button class="tbtn" id="clrHero">クリア</button></div>
-          <div class="slotrow" id="heroSlots"></div>
-        </div>
         <div class="grp">
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
@@ -235,7 +239,7 @@ th:first-child,td:first-child{text-align:left}
       <details class="tips">
         <summary>TIPS</summary>
         <ul>
-          <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
+          <li>枠（ヒーローのハンドも同じ）をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
           <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
           <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
           <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
@@ -243,40 +247,47 @@ th:first-child,td:first-child{text-align:left}
       </details>
     </section>
 
-    <!-- One range editor; app.js clones it so range mode shows hero's above (or
-         left of) villain's. Everything inside is addressed by class, not id. -->
+    <!-- One range editor; app.js clones it into the hero panel (#rp0), where the
+         hand input below joins it and only one of the two shows, by mode.
+         Everything inside the editor is addressed by class, not id. -->
+    <div class="grp" id="heroGrp">
+      <div class="grphd"><span class="lbl">ハンド</span><button class="tbtn" id="clrHero">クリア</button></div>
+      <div class="slotrow" id="heroSlots"></div>
+    </div>
     <section class="panel rpanel" id="rp1" data-k="1">
       <h2 class="rtitle">相手のレンジ</h2>
-      <div class="ctl">
-        <div class="ctl-block">
-          <span class="lbl">上位n%で一括選択</span>
-          <div class="sliderow">
-            <input type="range" class="topSlider" min="0" max="100" step="0.1" value="15" aria-label="上位何パーセントのハンドを選ぶか">
-            <span class="pctout topOut">15.0%</span>
+      <div class="reditor">
+        <div class="ctl">
+          <div class="ctl-block">
+            <span class="lbl">上位n%で一括選択</span>
+            <div class="sliderow">
+              <input type="range" class="topSlider" min="0" max="100" step="0.1" value="15" aria-label="上位何パーセントのハンドを選ぶか">
+              <span class="pctout topOut">15.0%</span>
+            </div>
+          </div>
+          <div class="ctl-block">
+            <span class="lbl">塗るウェイト</span>
+            <div class="segbtns wbtns">
+              <button data-w="1" aria-pressed="true">100%</button>
+              <button data-w="0.75" aria-pressed="false">75%</button>
+              <button data-w="0.5" aria-pressed="false">50%</button>
+              <button data-w="0.25" aria-pressed="false">25%</button>
+            </div>
           </div>
         </div>
-        <div class="ctl-block">
-          <span class="lbl">塗るウェイト</span>
-          <div class="segbtns wbtns">
-            <button data-w="1" aria-pressed="true">100%</button>
-            <button data-w="0.75" aria-pressed="false">75%</button>
-            <button data-w="0.5" aria-pressed="false">50%</button>
-            <button data-w="0.25" aria-pressed="false">25%</button>
-          </div>
+        <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
+        <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
+        <div class="presets"></div>
+        <div class="rowend">
+          <button class="tbtn clrRange">レンジをクリア</button>
+          <button class="tbtn allRange">全ハンド (100%)</button>
+          <span class="chip rangeInfo">–</span>
         </div>
-      </div>
-      <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
-      <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
-      <div class="presets"></div>
-      <div class="rowend">
-        <button class="tbtn clrRange">レンジをクリア</button>
-        <button class="tbtn allRange">全ハンド (100%)</button>
-        <span class="chip rangeInfo">–</span>
-      </div>
-      <textarea class="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
-      <div class="rowend">
-        <button class="tbtn applyText">テキストを適用</button>
-        <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
+        <textarea class="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
+        <div class="rowend">
+          <button class="tbtn applyText">テキストを適用</button>
+          <span class="note" style="margin:0">例: <code>AA,KK,AKs,AQo:0.5</code></span>
+        </div>
       </div>
       <details class="tips">
         <summary>TIPS</summary>
@@ -683,6 +694,7 @@ const RP=[];
 function buildPanels(){
   const v=$('rp1'),h=v.cloneNode(true);
   h.id='rp0';h.dataset.k='0';h.querySelector('.tips').remove();
+  h.insertBefore($('heroGrp'),h.querySelector('.reditor'));
   v.parentNode.insertBefore(h,v);
   for(const el of [h,v]){
     const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=k?'相手':'ヒーロー';
@@ -991,9 +1003,10 @@ function setMode(m){
   mode=m;
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
   $('title').textContent=m==='hand'?'ハンド vs レンジ エクイティ':'レンジ vs レンジ エクイティ';
-  $('heroGrp').hidden=m!=='hand';$('hmbtns').hidden=m==='hand';
-  $('cols').classList.toggle('rvr',m==='range');RP[0].el.hidden=m==='hand';
-  RP[0].title.textContent='ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
+  /* the hero panel holds either the two-card hand or the range editor */
+  $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
+  $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
+  RP[0].title.textContent=m==='hand'?'ヒーローのハンド':'ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.filter(c=>!u.has(c));}
   lastRes=null;

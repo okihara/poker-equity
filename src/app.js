@@ -105,6 +105,7 @@ const RP=[];
 function buildPanels(){
   const v=$('rp1'),h=v.cloneNode(true);
   h.id='rp0';h.dataset.k='0';h.querySelector('.tips').remove();
+  h.insertBefore($('heroGrp'),h.querySelector('.reditor'));
   v.parentNode.insertBefore(h,v);
   for(const el of [h,v]){
     const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=k?'相手':'ヒーロー';
@@ -413,9 +414,10 @@ function setMode(m){
   mode=m;
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
   $('title').textContent=m==='hand'?'ハンド vs レンジ エクイティ':'レンジ vs レンジ エクイティ';
-  $('heroGrp').hidden=m!=='hand';$('hmbtns').hidden=m==='hand';
-  $('cols').classList.toggle('rvr',m==='range');RP[0].el.hidden=m==='hand';
-  RP[0].title.textContent='ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
+  /* the hero panel holds either the two-card hand or the range editor */
+  $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
+  $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
+  RP[0].title.textContent=m==='hand'?'ヒーローのハンド':'ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.filter(c=>!u.has(c));}
   lastRes=null;
