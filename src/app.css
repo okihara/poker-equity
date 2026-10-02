@@ -144,6 +144,11 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 /* controls */
 .ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
 .ctl-block{display:flex;flex-direction:column;gap:5px;min-width:0}
+/* Painting at less than full weight is rare, so its buttons stay folded; the
+   summary still shows the weight in force so a lowered one is not forgotten. */
+.wdet{margin-top:0}
+.wdet[open]>summary{margin-bottom:5px}
+.wcur{font-family:var(--ff-num)}
 .sliderow{display:flex;align-items:center;gap:9px}
 input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
 .pctout{font-family:var(--ff-num);font-size:13px;font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}

@@ -185,7 +185,7 @@ function wirePanel(P){
   const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
   P.slider.addEventListener('input',()=>top(+P.slider.value));
   const wb=q('wbtns');
-  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);});
+  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);q('wcur').textContent=b.textContent;});
   for(const [label,pct] of PRESETS){
     const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
     b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);

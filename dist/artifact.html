@@ -148,6 +148,11 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 /* controls */
 .ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
 .ctl-block{display:flex;flex-direction:column;gap:5px;min-width:0}
+/* Painting at less than full weight is rare, so its buttons stay folded; the
+   summary still shows the weight in force so a lowered one is not forgotten. */
+.wdet{margin-top:0}
+.wdet[open]>summary{margin-bottom:5px}
+.wcur{font-family:var(--ff-num)}
 .sliderow{display:flex;align-items:center;gap:9px}
 input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
 .pctout{font-family:var(--ff-num);font-size:13px;font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}
@@ -261,15 +266,15 @@ th:first-child,td:first-child{text-align:left}
               <span class="pctout topOut">15.0%</span>
             </div>
           </div>
-          <div class="ctl-block">
-            <span class="lbl">塗るウェイト</span>
+          <details class="ctl-block wdet">
+            <summary>塗るウェイト <span class="wcur">100%</span></summary>
             <div class="segbtns wbtns">
               <button data-w="1" aria-pressed="true">100%</button>
               <button data-w="0.75" aria-pressed="false">75%</button>
               <button data-w="0.5" aria-pressed="false">50%</button>
               <button data-w="0.25" aria-pressed="false">25%</button>
             </div>
-          </div>
+          </details>
         </div>
         <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
         <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
@@ -790,7 +795,7 @@ function wirePanel(P){
   const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
   P.slider.addEventListener('input',()=>top(+P.slider.value));
   const wb=q('wbtns');
-  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);});
+  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);q('wcur').textContent=b.textContent;});
   for(const [label,pct] of PRESETS){
     const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
     b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
