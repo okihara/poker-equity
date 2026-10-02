@@ -193,3 +193,39 @@ test('resolves kickers that only the sixth and seventh card decide', () => {
   assert.ok(ev('9c 9d 9h 9s Ac 2d 3h') > ev('9c 9d 9h 9s Kc Qd Jh'), 'quads take one kicker');
   assert.ok(ev('2c 2d 2h 2s 3c 4d 5h') > ev('Ac Ad Ah Kc Kd Kh Qs'), 'the worst quads beat any boat');
 });
+
+/* One ladder per category: each pair of hands agrees on everything but the
+   kicker named, so a packing that drops or misorders any kicker slot fails. */
+test('compares every kicker slot, category by category', () => {
+  const ladders = [
+    ['high card, 5th card', 'Ac Qd 9h 7s 5c 3d 2h', 'Ac Qd 9h 7s 4c 3d 2h'],
+    ['high card, 1st card', 'Ac 4d 6h 8s 9c 2d 3h', 'Kc Qd Jh 9s 7c 2d 3h'],
+    ['pair, 3rd kicker', 'Ac Ad Kh Qs 9c 3d 2h', 'Ac Ad Kh Qs 8c 3d 2h'],
+    ['pair, pair rank first', '2c 2d Kh Qs 9c 7d 5h', 'Ac Kd Qh Js 9c 7d 5h'],
+    ['two pair, kicker', 'Ac Ad 9h 9s Kc 3d 2h', 'Ac Ad 9h 9s Qc 3d 2h'],
+    ['two pair, low pair', 'Ac Ad 9h 9s 2c 3d 4h', 'Ac Ad 8h 8s Kc Qd Jh'],
+    ['trips, 2nd kicker', '7c 7d 7h As 9c 3d 2h', '7c 7d 7h As 8c 3d 2h'],
+    ['full house, pair part', '7c 7d 7h 9s 9c 3d 2h', '7c 7d 7h 8s 8c 3d 2h'],
+    ['full house, trips first', '7c 7d 7h 2s 2c 3d 4h', '6c 6d 6h As Ac 3d 2h'],
+    ['flush, 5th card', 'Ah Jh 9h 6h 4h 2c 3d', 'Ah Jh 9h 6h 3h 2c 4d'],
+  ];
+  for (const [label, hi, lo] of ladders) assert.ok(ev(hi) > ev(lo), label + ': ' + hi + ' > ' + lo);
+});
+
+test('straights: the wheel is the lowest, there is no wraparound, the top five play', () => {
+  assert.ok(ev('6c 5d 4h 3s 2c Kd 9h') > ev('5c 4d 3h 2s Ac Kd 9h'), '6-high beats the wheel');
+  assert.ok(ev('5c 4d 3h 2s Ac Kd 9h') > ev('Ac Ad Ah 9s 7c 3d 2h'), 'the wheel still beats trips');
+  assert.strictEqual(catOf(ev('Qc Kd Ah 2s 3c 8d 9h')), 0, 'Q-K-A-2-3 does not wrap around');
+  assert.strictEqual(ev('9c 8d 7h 6s 5c 4d 3h'), ev('9c 8d 7h 6s 5c Kd 2h'),
+    'seven in a row plays only the top five');
+  assert.strictEqual(ev('6c 5d 4h 3s 2c Ad 9h'), ev('6c 5d 4h 3s 2c Kd 9h'),
+    'an ace below a 6-high straight adds nothing');
+  assert.ok(ev('Th 9h 8h 7h 6h 5c 4d') > ev('Ah Kh 9h 7h 6h 5c 4d'), 'straight flush over flush');
+});
+
+test('the board plays: identical best fives tie whatever the hole cards', () => {
+  const board = 'Ac Kd Qh Js Tc';
+  assert.strictEqual(ev('2c 3d ' + board), ev('4h 5s ' + board), 'broadway on board');
+  assert.strictEqual(ev('2c 3d 9h 9s 9c 9d Kh'), ev('4h 5s 9h 9s 9c 9d Kh'), 'quads with the kicker on board');
+  assert.ok(ev('Ah 3d 9h 9s 9c 9d Kh') > ev('4h 5s 9h 9s 9c 9d Kh'), 'unless a hole card out-kicks it');
+});

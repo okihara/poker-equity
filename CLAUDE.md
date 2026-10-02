@@ -10,9 +10,10 @@ README.md に計算方式・列挙 vs モンテカルロの閾値表・検証内
 
 ```sh
 npm run build   # src/ -> index.html + dist/artifact.html を生成
-npm test        # 全テスト（約13秒）
+npm test        # 全テスト（約10秒）
 npm run check   # build してから test
 npm run rank    # src/rank-order.json を再計算（約40秒、シード固定で再現可能）
+npm run bench   # 評価器などのスループット計測（タイミングはテストに入れない方針）
 ```
 
 単一テストファイル: `node --test test/equity.test.js`
