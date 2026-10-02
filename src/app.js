@@ -245,6 +245,7 @@ function render(){
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
   for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
+  $('deadCur').textContent=dead.length?' '+dead.length+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;b.disabled=used.has(c);b.classList.toggle('cur',c===cur);}

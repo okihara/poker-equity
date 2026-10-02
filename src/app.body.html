@@ -47,10 +47,13 @@
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
         </div>
-        <div class="grp inl">
-          <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
-          <div class="slotrow" id="deadSlots"></div>
-        </div>
+        <details class="deaddet">
+          <summary>デッドカード<span id="deadCur"></span></summary>
+          <div class="grp inl">
+            <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
+            <div class="slotrow" id="deadSlots"></div>
+          </div>
+        </details>
       </div>
     </section>
 

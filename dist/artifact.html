@@ -109,6 +109,10 @@ h1{font-size:clamp(21px,3.4vw,29px);font-weight:700;letter-spacing:-.02em;line-h
 .grp.inl>.grphd>.tbtn{order:1}
 .lbl{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 .slots{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+/* Dead cards are rarely used, so they stay folded; the summary counts the
+   ones in play so a folded row never hides cards that change the result. */
+.deaddet{flex-basis:100%;margin-top:0}
+.deaddet[open]>summary{margin-bottom:8px}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:3px}
 .pc{aspect-ratio:3/4;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.05;font-size:clamp(8px,calc((100cqw - 36px)/13*.55),24px)}
 .pc .r{font-weight:700;letter-spacing:-.02em}
@@ -242,10 +246,13 @@ th:first-child,td:first-child{text-align:left}
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
         </div>
-        <div class="grp inl">
-          <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
-          <div class="slotrow" id="deadSlots"></div>
-        </div>
+        <details class="deaddet">
+          <summary>デッドカード<span id="deadCur"></span></summary>
+          <div class="grp inl">
+            <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
+            <div class="slotrow" id="deadSlots"></div>
+          </div>
+        </details>
       </div>
     </section>
 
@@ -855,6 +862,7 @@ function render(){
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
   for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
+  $('deadCur').textContent=dead.length?' '+dead.length+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;b.disabled=used.has(c);b.classList.toggle('cur',c===cur);}
