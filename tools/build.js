@@ -6,7 +6,7 @@
  *   dist/artifact.html  body-only fragment for the Claude Artifact platform,
  *                       which supplies its own doctype/head/body wrapper
  *
- * Both embed the exact bytes of src/evaluator.js and src/equity.js, so what the
+ * Both embed the exact bytes of src/evaluator.js, src/equity.js and src/rvr.js, so what the
  * tests exercise is what ships. test/build.test.js enforces that.
  */
 const fs = require('fs');
@@ -22,6 +22,7 @@ const parts = {
   rank: R('src/rank-order.json').trim(),
   evaluator: R('src/evaluator.js').trimEnd(),
   equity: R('src/equity.js').trimEnd(),
+  rvr: R('src/rvr.js').trimEnd(),
   app: R('src/app.js').trimEnd(),
 };
 
@@ -33,6 +34,8 @@ const script = [
   parts.evaluator,
   '',
   parts.equity,
+  '',
+  parts.rvr,
   '',
   parts.app,
   '</script>',

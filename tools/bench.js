@@ -9,7 +9,7 @@
  * The performance targets for range-vs-range (preflop < 100ms, flop < 1s,
  * turn/river near-instant) get their own rows here as those phases land.
  */
-const { loadEngine } = require('./load-engine.js');
+const { loadEngine, parseCards } = require('./load-engine.js');
 
 const E = loadEngine();
 
@@ -48,6 +48,26 @@ function benchEval7() {
   return [(ms * 1e6 / N).toFixed(1) + ' ns/eval', (N / ms / 1000).toFixed(1) + 'M evals/s'];
 }
 
-const rows = [['eval7 (random 7-card hands)', ...benchEval7()]];
-console.log('node ' + process.version + ', ' + process.arch);
-for (const r of rows) console.log(r[0].padEnd(34) + r.slice(1).map((s) => s.padStart(16)).join(''));
+/* Range vs range at its worst case: every one of the 1326 combos on both sides. */
+async function benchRvr(board, target) {
+  const all = [];
+  for (let a = 0; a < 52; a++) for (let b = a + 1; b < 52; b++) all.push([a, b, 1]);
+  let min = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const t = process.hrtime.bigint();
+    await E.computeRangeEquity(all, all, parseCards(board), [], {});
+    min = Math.min(min, Number(process.hrtime.bigint() - t) / 1e6);
+  }
+  return [min.toFixed(1) + ' ms', 'target ' + target];
+}
+
+(async () => {
+  const rows = [
+    ['eval7 (random 7-card hands)', ...benchEval7()],
+    ['rvr full vs full, flop', ...await benchRvr('Qs Js 2h', '< 1s')],
+    ['rvr full vs full, turn', ...await benchRvr('Qs Js 2h 7d', 'instant')],
+    ['rvr full vs full, river', ...await benchRvr('Qs Js 2h 7d 3c', 'instant')],
+  ];
+  console.log('node ' + process.version + ', ' + process.arch);
+  for (const r of rows) console.log(r[0].padEnd(34) + r.slice(1).map((s) => s.padStart(16)).join(''));
+})();

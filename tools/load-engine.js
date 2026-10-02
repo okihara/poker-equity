@@ -1,5 +1,5 @@
 /**
- * Loads src/evaluator.js and src/equity.js the same way the built page does:
+ * Loads src/evaluator.js, src/equity.js and src/rvr.js the same way the built page does:
  * plain classic scripts sharing one scope, concatenated in order. Keeping src/
  * free of module boilerplate means the bytes under test are the bytes that
  * ship (test/build.test.js checks that), and evaluating them in this realm
@@ -11,7 +11,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
-const EXPORTS = ['eval7', 'makeRng', 'computeEquity', 'cellCombos', 'cellName', 'cellOf',
+const EXPORTS = ['eval7', 'makeRng', 'computeEquity', 'computeRangeEquity', 'cellCombos', 'cellName', 'cellOf',
   'comboCount', 'cardName', 'RANKS', 'SUITS', 'RANK_ORDER', 'NAME2IJ', 'CELLN',
   /* internals, so the tests can check the lookup tables and the category
      packing directly rather than only through eval7's output */
@@ -22,6 +22,7 @@ function loadEngine() {
     'const RANK_ORDER=' + read('src/rank-order.json').trim() + ';',
     read('src/evaluator.js'),
     read('src/equity.js'),
+    read('src/rvr.js'),
     'return {' + EXPORTS.join(',') + '};',
   ].join('\n');
   return new Function(src)();
