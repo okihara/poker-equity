@@ -30,15 +30,14 @@ button{font:inherit;color:inherit;cursor:pointer}
 .modebtns button[aria-pressed=true]{background:var(--hero)}
 .hmtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .hmtitle h2.seclabel{margin:0}
-/* range mode: hand and board across the top, then hero's range and villain's */
-/* Board first, then hero, then villain in both modes. Wide: hand mode puts the
-   board over hero's hand on the left and villain's range on the right; range
-   mode puts the board across the top and the two ranges below. */
+/* Board first, then hero, then villain in both modes. Wide: the board runs
+   across the top and hero (hand or range) sits beside villain's range below,
+   their tops level; range mode splits the two columns evenly. */
 .cols{grid-template-areas:"board" "hero" "villain"}
 #rp0{grid-area:hero}#boardPanel{grid-area:board}#rp1{grid-area:villain}
 @media(min-width:960px){
-  .cols{grid-template-rows:auto 1fr;grid-template-areas:"board villain" "hero villain"}
-  .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;grid-template-areas:"board board" "hero villain"}
+  .cols{grid-template-areas:"board board" "hero villain"}
+  .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
 .bignum.interim .v,.bignum.interim .pct{opacity:.5}
 
