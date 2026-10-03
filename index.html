@@ -124,8 +124,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:3px}
 .pc{aspect-ratio:3/4;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.05;font-size:clamp(8px,calc((100cqw - 36px)/13*.55),24px)}
 .pc .r{font-weight:700;letter-spacing:-.02em}
-.pc:disabled{opacity:.22;cursor:not-allowed}
-.pc:not(:disabled):hover{background:var(--surface-3);border-color:var(--line-2)}
+.pc.used{opacity:.22}
+.pc:hover{background:var(--surface-3);border-color:var(--line-2)}
+.pc.used:hover{opacity:.5}
 .pc.cur{opacity:1;border-color:var(--hero);box-shadow:0 0 0 2px var(--hero-soft)}
 .dlg{width:min(640px,calc(100vw - 32px));max-width:none;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .dlg::backdrop{background:rgba(14,22,32,.38)}
@@ -702,13 +703,25 @@ function buildPicker(){
   }
 }
 function pickCard(c){
-  if(!activeSlot||usedCards().has(c))return;
+  if(!activeSlot)return;
+  if(usedCards().has(c)){unpickCard(c);return;}
   const {kind,i}=activeSlot,arr=cardsOf(kind),cap=SLOTS[kind].cap,replace=i<arr.length;
   if(replace)arr[i]=c;else if(arr.length<cap)arr.push(c);else return;
   schedule();
   /* filling empty slots walks on to the next one; a swap, or a full row, is done */
   if(replace||arr.length>=cap){closePicker();return;}
   activeSlot={kind,i:arr.length};render();
+}
+/* A card already in play is taken back out of whichever row holds it; the open
+   slot follows its card if the row closes up beneath it. */
+function unpickCard(c){
+  for(const k of mode==='hand'?['hero','board','dead']:['board','dead']){
+    const arr=cardsOf(k),j=arr.indexOf(c);if(j<0)continue;
+    arr.splice(j,1);
+    if(activeSlot.kind===k&&j<activeSlot.i)activeSlot.i--;
+    activeSlot.i=Math.min(activeSlot.i,cardsOf(activeSlot.kind).length);
+    schedule();render();return;
+  }
 }
 /* ---- card picker dialog ---- */
 const dlg=$('pickdlg');
@@ -872,7 +885,7 @@ function render(){
   $('deadCur').textContent=dead.length?' '+dead.length+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
-  for(const b of picker.children){const c=+b.dataset.c;b.disabled=used.has(c);b.classList.toggle('cur',c===cur);}
+  for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
   $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!==undefined?'を差し替え':'')+
     (arr.length?' <span class="sub">'+handStr(arr)+'</span>':'');
   $('pickRemove').hidden=cur===undefined;
