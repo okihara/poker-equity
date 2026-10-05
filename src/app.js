@@ -45,6 +45,12 @@ const ranges=[newRange(),newRange()];
 let precision=2000, lastRes=null;
 const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'},dead:{cap:4,label:'デッド'}};
 const cardsOf=k=>k==='hero'?hero:k==='board'?board:dead;
+/* Rows keep their cards in place: taking one out leaves a hole (null) rather
+   than sliding the rest left, so live() is what the engine and labels see. */
+const live=a=>a.filter(c=>c!=null);
+/* the first hole at or after `from`, wrapping round the row; -1 when it is full */
+function holeOf(kind,from){const arr=cardsOf(kind),cap=SLOTS[kind].cap;
+  for(let n=0;n<cap;n++){const i=(from+n)%cap;if(arr[i]==null)return i;}return -1;}
 
 /* ---- DOM build ---- */
 const $=id=>document.getElementById(id);
@@ -62,9 +68,9 @@ function mkSlot(kind,i){
   return b;
 }
 function paintSlot(el,card,active){
-  el.classList.toggle('filled',card!==undefined);
+  el.classList.toggle('filled',card!=null);
   el.classList.toggle('active',active);
-  if(card===undefined){el.innerHTML='<span class="ph">+</span>';}
+  if(card==null){el.innerHTML='<span class="ph">+</span>';}
   else{el.innerHTML='<span class="r">'+RANKS[card>>2]+'</span><span class="s '+SCLS[card&3]+'">'+SYM[card&3]+'</span>';}
 }
 function buildPicker(){
@@ -80,27 +86,25 @@ function buildPicker(){
 function pickCard(c){
   if(!activeSlot)return;
   if(usedCards().has(c)){unpickCard(c);return;}
-  const {kind,i}=activeSlot,arr=cardsOf(kind),cap=SLOTS[kind].cap,replace=i<arr.length;
-  if(replace)arr[i]=c;else if(arr.length<cap)arr.push(c);else return;
-  schedule();
+  const {kind,i}=activeSlot,arr=cardsOf(kind),replace=arr[i]!=null;
+  arr[i]=c;schedule();
   /* filling empty slots walks on to the next one; a swap, or a full row, is done */
-  if(replace||arr.length>=cap){closePicker();return;}
-  activeSlot={kind,i:arr.length};render();
+  const nx=replace?-1:holeOf(kind,i+1);
+  if(nx<0){closePicker();return;}
+  activeSlot={kind,i:nx};render();
 }
-/* A card already in play is taken back out of whichever row holds it; the open
-   slot follows its card if the row closes up beneath it. */
+/* A card already in play is taken back out of whichever row holds it, leaving
+   a hole where it was; the open slot stays where it is. */
 function unpickCard(c){
   for(const k of mode==='hand'?['hero','board','dead']:['board','dead']){
     const arr=cardsOf(k),j=arr.indexOf(c);if(j<0)continue;
-    arr.splice(j,1);
-    if(activeSlot.kind===k&&j<activeSlot.i)activeSlot.i--;
-    activeSlot.i=Math.min(activeSlot.i,cardsOf(activeSlot.kind).length);
-    schedule();render();return;
+    arr[j]=null;schedule();render();return;
   }
 }
 /* ---- card picker dialog ---- */
 const dlg=$('pickdlg');
-function openPicker(kind,i){activeSlot={kind,i:Math.min(i,cardsOf(kind).length)};render();if(!dlg.open)dlg.showModal();}
+/* an empty slot past the row's first hole opens that hole instead */
+function openPicker(kind,i){if(cardsOf(kind)[i]==null)i=holeOf(kind,0);activeSlot={kind,i};render();if(!dlg.open)dlg.showModal();}
 /* 'close' fires a task later; drop the target now so no click lands in between */
 function closePicker(){activeSlot=null;if(dlg.open)dlg.close();render();}
 dlg.addEventListener('close',()=>{activeSlot=null;render();});
@@ -117,7 +121,7 @@ onBackdrop(help,closeHelp);
 $('helpClose').addEventListener('click',closeHelp);
 $('helpBtn').addEventListener('click',()=>help.showModal());
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
-  cardsOf(activeSlot.kind).splice(activeSlot.i,1);schedule();closePicker();});
+  cardsOf(activeSlot.kind)[activeSlot.i]=null;schedule();closePicker();});
 /* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
 const RP=[];
 function buildPanels(){
@@ -257,18 +261,18 @@ function render(){
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
   for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
-  $('deadCur').textContent=dead.length?' '+dead.length+'枚':'';
+  const nd=live(dead).length;$('deadCur').textContent=nd?' '+nd+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
-  $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!==undefined?'を差し替え':'')+
-    (arr.length?' <span class="sub">'+handStr(arr)+'</span>':'');
-  $('pickRemove').hidden=cur===undefined;
+  $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!=null?'を差し替え':'')+
+    (live(arr).length?' <span class="sub">'+handStr(live(arr))+'</span>':'');
+  $('pickRemove').hidden=cur==null;
   $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':
     kind==='dead'?'デッドは誰の手にもボードにも来ないカード（最大4枚）。':'';
 }
 /* Hero's cards only count in hand mode; in range mode they are hidden and ignored. */
-function usedCards(){return new Set([...(mode==='hand'?hero:[]),...board,...dead]);}
+function usedCards(){return new Set(live([...(mode==='hand'?hero:[]),...board,...dead]));}
 function handStr(cards){return cards.map(c=>'<span class="'+SCLS[c&3]+'" style="font-weight:600">'+RANKS[c>>2]+SYM[c&3]+'</span>').join('');}
 let warnTimer=null;
 /* One timer, restarted on every message: without clearing it the previous
@@ -293,7 +297,7 @@ function calc(id,a,b,onProgress,isStale){
   return new Promise(done=>{
     /* a newer query supersedes the rest; the worker drops them without answering */
     for(const [k,j] of jobs){jobs.delete(k);j.done({stale:true});}
-    const j={a,b,board:board.slice(),dead:dead.slice(),mcBoards:precision,onProgress,isStale,done};
+    const j={a,b,board:live(board),dead:live(dead),mcBoards:precision,onProgress,isStale,done};
     if(!worker){calcHere(j).then(done);return;}
     jobs.set(id,j);worker.postMessage({id,a,b,board:j.board,dead:j.dead,opts:{mcBoards:j.mcBoards}});
   });
@@ -319,9 +323,10 @@ function rawRange(w){const raw=[];
   return raw;}
 async function run(){
   const my=++token;
-  if(mode==='hand'&&hero.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
-  if(board.length===1||board.length===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
-  const a=mode==='hand'?[[hero[0],hero[1],1]]:rawRange(ranges[0]),b=rawRange(ranges[1]);
+  const H=live(hero),nb=live(board).length;
+  if(mode==='hand'&&H.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
+  if(nb===1||nb===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
+  const a=mode==='hand'?[[H[0],H[1],1]]:rawRange(ranges[0]),b=rawRange(ranges[1]);
   if(!a.length){clearResult('ヒーローのレンジを選んでください。');return;}
   if(!b.length){clearResult('相手のレンジを選んでください。');return;}
   $('prog').classList.add('on');$('progi').style.width='0%';
@@ -350,15 +355,15 @@ function showResult(r){
   $('segL').textContent=r.lose>0.1?pct(r.lose):'';
   $('kw').textContent=pct(r.win);$('kt').textContent=pct(r.tie);$('kl').textContent=pct(r.lose);
   const vs=' <span style="color:var(--ink-3)">vs</span> ';
-  $('matchup').innerHTML=(mode==='hand'?handStr(hero):'ヒーローのレンジ')+vs+(mode==='hand'?'レンジ':'相手のレンジ')+
-    (board.length?' <span style="color:var(--ink-3)">/ ボード</span> '+handStr(board):' <span style="color:var(--ink-3)">（プリフロップ）</span>')+
-    (dead.length?' <span style="color:var(--ink-3)">/ デッド</span> '+handStr(dead):'');
+  $('matchup').innerHTML=(mode==='hand'?handStr(live(hero)):'ヒーローのレンジ')+vs+(mode==='hand'?'レンジ':'相手のレンジ')+
+    (live(board).length?' <span style="color:var(--ink-3)">/ ボード</span> '+handStr(live(board)):' <span style="color:var(--ink-3)">（プリフロップ）</span>')+
+    (live(dead).length?' <span style="color:var(--ink-3)">/ デッド</span> '+handStr(live(dead)):'');
   const combos=w=>{let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)t+=w[i][j]*comboCount(CELLN[i][j]);return t.toFixed(t%1?1:0);};
   const chips=[];
   if(mode==='range')chips.push(['ヒーロー '+combos(ranges[0])+'コンボ → '+r.nCombos,false]);
   chips.push([(mode==='range'?'相手 ':'レンジ ')+combos(ranges[1])+'コンボ → '+r.nCombosOpp+'（ブロッカー除外後）',false]);
   chips.push([r.mode==='mc'?'モンテカルロ '+r.nRunouts.toLocaleString()+'ボード':
-    board.length?'完全列挙 '+r.nRunouts.toLocaleString()+'ランナウト':'事前計算表（全ボード列挙済み）',true]);
+    live(board).length?'完全列挙 '+r.nRunouts.toLocaleString()+'ランナウト':'事前計算表（全ボード列挙済み）',true]);
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
@@ -441,7 +446,7 @@ function setMode(m){
   $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
   RP[0].title.textContent=m==='hand'?'ヒーローのハンド':'ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
-  if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.filter(c=>!u.has(c));}
+  if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.map(c=>u.has(c)?null:c);}
   lastRes=null;
   for(const P of RP){repaintAll(P);syncText(P);}
   setHmSide(hmSide);render();
