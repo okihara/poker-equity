@@ -184,7 +184,19 @@ button{font:inherit;color:inherit;cursor:pointer}
 .wdet[open]>summary{margin-bottom:5px}
 .wcur{font-family:var(--ff-num)}
 .sliderow{display:flex;align-items:center;gap:9px}
-input[type=range]{accent-color:var(--opp);width:clamp(120px,26vw,190px)}
+/* The slider takes the row's spare width: 0-100% in 0.1 steps needs the pixels,
+   and on a phone a fixed 120px made each pixel almost a whole percent. */
+.ctl>.ctl-block:first-child{flex:1 1 260px}
+input[type=range]{accent-color:var(--opp);flex:1;min-width:0;margin:0;height:28px}
+/* Fingers get a bigger thumb and track than the native ones. */
+@media(pointer:coarse){
+  input[type=range]{-webkit-appearance:none;appearance:none;height:40px;background:transparent}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--surface-3)}
+  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--surface-3)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-11px;border-radius:50%;
+    background:var(--opp);border:3px solid var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--opp);border:3px solid var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+}
 .pctout{font-family:var(--ff-num);font-size:13px;font-weight:600;min-width:52px;font-variant-numeric:tabular-nums}
 .segbtns{display:flex;gap:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface-2)}
 .segbtns button{border:0;background:transparent;padding:5px 9px;font-size:11px;font-family:var(--ff-num);color:var(--ink-2);border-right:1px solid var(--line)}
