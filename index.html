@@ -51,6 +51,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 /* header */
 .hd{padding:6px 10px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+/* iOS blurs the strip under the status bar, so the header starts below it
+   there (-webkit-touch-callout is iOS-only). */
+@supports(-webkit-touch-callout:none){.hd{padding-top:28px}}
 .menu{position:relative;margin-left:auto}
 .menubtn{display:flex;align-items:center;padding:5px 7px}
 .menupop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:200px;display:flex;flex-direction:column;gap:6px;
