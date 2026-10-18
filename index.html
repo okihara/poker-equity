@@ -55,13 +55,13 @@ button{font:inherit;color:inherit;cursor:pointer}
    there (-webkit-touch-callout is iOS-only). */
 @supports(-webkit-touch-callout:none){.hd{padding-top:28px}}
 .menu{position:relative;margin-left:auto}
-.menubtn{display:flex;align-items:center;padding:5px 7px}
+.tbtn.menubtn{display:flex;align-items:center;padding:10px}
 .menupop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:200px;display:flex;flex-direction:column;gap:6px;
   padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
 .menupop .segbtns button{flex:1}
 .menuitem{border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:8px 2px 2px;font-size:12.5px;margin-top:4px}
 .menuitem:hover{color:var(--hero)}
-.modebtns button{font-size:12px;padding:6px 11px}
+.segbtns.modebtns button{font-size:14px;font-weight:600;font-family:var(--ff-ui);padding:9px 16px}
 .modebtns button[aria-pressed=true]{background:var(--hero)}
 .hmtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .hmtitle h2.seclabel{margin:0}
