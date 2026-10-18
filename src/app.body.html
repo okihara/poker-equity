@@ -5,7 +5,18 @@
         <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
         <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
       </div>
-      <button class="tbtn" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
+    </div>
+    <div class="menu">
+      <button class="tbtn menubtn" id="menuBtn" type="button" aria-label="メニュー" aria-expanded="false" aria-controls="menuPop"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+      <div class="menupop" id="menuPop" hidden>
+        <div class="lbl">テーマ</div>
+        <div class="segbtns" id="themeBtns" role="group" aria-label="テーマ">
+          <button data-t="auto" aria-pressed="true">自動</button>
+          <button data-t="light" aria-pressed="false">ライト</button>
+          <button data-t="dark" aria-pressed="false">ダーク</button>
+        </div>
+        <button class="menuitem" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
+      </div>
     </div>
   </header>
 

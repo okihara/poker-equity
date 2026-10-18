@@ -119,7 +119,26 @@ $('pickClose').addEventListener('click',closePicker);
 const help=$('helpdlg'),closeHelp=()=>help.close();
 onBackdrop(help,closeHelp);
 $('helpClose').addEventListener('click',closeHelp);
-$('helpBtn').addEventListener('click',()=>help.showModal());
+$('helpBtn').addEventListener('click',()=>{closeMenu();help.showModal();});
+/* ---- menu (top right) ---- */
+const menuBtn=$('menuBtn'),menuPop=$('menuPop');
+function closeMenu(){menuPop.hidden=true;menuBtn.setAttribute('aria-expanded','false');}
+menuBtn.addEventListener('click',()=>{const o=menuPop.hidden;menuPop.hidden=!o;menuBtn.setAttribute('aria-expanded',o?'true':'false');});
+document.addEventListener('pointerdown',e=>{if(!menuPop.hidden&&!e.target.closest('.menu'))closeMenu();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menuPop.hidden){closeMenu();menuBtn.focus();}});
+/* ---- theme: 'auto' follows the OS; the resolved one goes on the root element's data-theme ---- */
+let theme='auto';const darkMq=window.matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  document.documentElement.dataset.theme=theme==='auto'?(darkMq.matches?'dark':'light'):theme;
+  pressed($('themeBtns'),$('themeBtns').querySelector('[data-t="'+theme+'"]'));
+  /* range cells, heatmap and legend carry inline colours mixed from the palette */
+  refreshPalette();drawLegend();
+  if(RP.length){for(const P of RP)repaintGrid(P);if(lastRes)drawHeat(lastRes);}
+}
+try{const t=localStorage.getItem('eqtheme');if(t==='light'||t==='dark')theme=t;}catch(e){}
+darkMq.addEventListener('change',()=>{if(theme==='auto')applyTheme();});
+$('themeBtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  theme=b.dataset.t;try{localStorage.setItem('eqtheme',theme);}catch(e){}applyTheme();});
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
   cardsOf(activeSlot.kind)[activeSlot.i]=null;schedule();closePicker();});
 /* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
@@ -462,7 +481,7 @@ $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
 $('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
 
 /* ---- boot ---- */
-refreshPalette();buildSlots();buildPicker();buildPanels();buildHeatGrid();drawLegend();startWorker();
+applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
   selectTopPct(RP[1],15);

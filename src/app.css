@@ -12,6 +12,20 @@
   --ff-ui:"Archivo","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   --ff-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
+/* app.js sets data-theme to the resolved theme ("自動" follows the OS), so the
+   dark values live in one place and refreshPalette() can re-read them. */
+:root[data-theme=dark]{
+  color-scheme: dark;
+  --bg:#0f1418; --surface:#171d23; --surface-2:#1e252c; --surface-3:#28313a;
+  --line:#2c353e; --line-2:#3d4853;
+  --ink:#e6ebf0; --ink-2:#aab5c0; --ink-3:#7c8995;
+  --hero:#f0794a; --hero-soft:#3a2219;
+  --opp:#4b92e6; --opp-soft:#192a40;
+  --clear:#e06464; --clear-soft:#341b1d; --clear-line:#5a2c2f;
+  --pole-hi:#3d8ae4; --pole-lo:#dc4d4d; --pole-mid:#3a434d;
+  --spade:#e6ebf0; --heart:#ec5f5f; --diamond:#5aa0f0; --club:#2fbf4a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.6);
+}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ff-ui);-webkit-text-size-adjust:100%}
 .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
@@ -22,6 +36,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 /* header */
 .hd{padding:6px 10px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.menu{position:relative;margin-left:auto}
+.menubtn{display:flex;align-items:center;padding:5px 7px}
+.menupop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:200px;display:flex;flex-direction:column;gap:6px;
+  padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
+.menupop .segbtns button{flex:1}
+.menuitem{border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:8px 2px 2px;font-size:12.5px;margin-top:4px}
+.menuitem:hover{color:var(--hero)}
 .modebtns button{font-size:12px;padding:6px 11px}
 .modebtns button[aria-pressed=true]{background:var(--hero)}
 .hmtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}

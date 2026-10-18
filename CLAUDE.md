@@ -79,7 +79,7 @@ npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8�
 ## 配色
 
 `src/app.js` に色リテラルを書かない。CSS 変数（`--pole-hi` / `--pole-lo` / `--opp` など）を
-`cssVar()` で読み、Oklab 空間で補間する（`divergeLab` / `divergeColor`）。テーマはライトのみ（ダークモードは持たない）。`refreshPalette()` は起動時に一度だけ呼ばれる。
+`cssVar()` で読み、Oklab 空間で補間する（`divergeLab` / `divergeColor`）。テーマは右上メニューで自動・ライト・ダークを切り替える。`applyTheme()` が `<html data-theme>` に解決後のテーマ（light/dark）を置き、ダークの値は `app.css` の `:root[data-theme=dark]` にだけ書く。切り替えのたびに `refreshPalette()` を呼び直し、インラインで色を塗ったグリッド・ヒートマップ・凡例を塗り直す。
 
 ## コードスタイル
 

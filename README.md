@@ -119,7 +119,7 @@ src/
   worker.js         Worker 内で動いたときのメッセージ処理
   preflop-table.bin 47,008 クラスの勝ち数・引き分け数（tools/build-preflop.js が生成）
   app.js            UI（グリッド、カード選択、ヒートマップ、配色）
-  app.css           スタイル（ライトテーマのみ）
+  app.css           スタイル（ライト・ダークテーマ）
   app.head.html     <title> とフォント
   app.body.html     マークアップ
   rank-order.json   169ハンドのエクイティ順（tools/build-rank.js が生成）
