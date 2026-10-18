@@ -132,11 +132,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .grp.inl>.grphd{display:contents}
 .grp.inl>.grphd>.tbtn{order:1}
 .lbl{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-.slots{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
-/* Dead cards are rarely used, so they stay folded; the summary counts the
-   ones in play so a folded row never hides cards that change the result. */
-.deaddet{flex-basis:100%;margin-top:0}
-.deaddet[open]>summary{margin-bottom:8px}
+.slots{display:flex;flex-wrap:wrap;gap:12px}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:2px}
 .pc{aspect-ratio:3/4;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.05;font-size:clamp(8px,calc((100cqw - 24px)/13*.55),26px)}
 .pc .r{font-weight:700;letter-spacing:-.02em}
@@ -181,11 +177,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* controls */
 .ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
 .ctl-block{display:flex;flex-direction:column;gap:5px;min-width:0}
-/* Painting at less than full weight is rare, so its buttons stay folded; the
-   summary still shows the weight in force so a lowered one is not forgotten. */
-.wdet{margin-top:0}
-.wdet[open]>summary{margin-bottom:5px}
-.wcur{font-family:var(--ff-num)}
 .sliderow{display:flex;align-items:center;gap:9px}
 /* The slider takes the row's spare width: 0-100% in 0.1 steps needs the pixels,
    and on a phone a fixed 120px made each pixel almost a whole percent. */
@@ -290,19 +281,12 @@ th:first-child,td:first-child{text-align:left}
   </section>
 
   <div class="cols" id="cols">
-    <section class="panel" id="boardPanel" aria-label="ボードとデッド">
+    <section class="panel" id="boardPanel" aria-label="ボード">
       <div class="slots">
         <div class="grp inl">
           <div class="grphd"><span class="lbl">ボード</span><button class="tbtn" id="clrBoard">クリア</button></div>
           <div class="slotrow" id="boardSlots"></div>
         </div>
-        <details class="deaddet">
-          <summary>デッドカード<span id="deadCur"></span></summary>
-          <div class="grp inl">
-            <div class="grphd"><span class="lbl">デッド</span><button class="tbtn" id="clrDead">クリア</button></div>
-            <div class="slotrow" id="deadSlots"></div>
-          </div>
-        </details>
       </div>
     </section>
 
@@ -323,15 +307,6 @@ th:first-child,td:first-child{text-align:left}
               <span class="pctout topOut">15.0%</span>
             </div>
           </div>
-          <details class="ctl-block wdet">
-            <summary>塗るウェイト <span class="wcur">100%</span></summary>
-            <div class="segbtns wbtns">
-              <button data-w="1" aria-pressed="true">100%</button>
-              <button data-w="0.75" aria-pressed="false">75%</button>
-              <button data-w="0.5" aria-pressed="false">50%</button>
-              <button data-w="0.25" aria-pressed="false">25%</button>
-            </div>
-          </details>
         </div>
         <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
         <div class="lbl presetlbl">MTT 100bb chipEV オープンレンジ</div>
@@ -374,7 +349,7 @@ th:first-child,td:first-child{text-align:left}
     </details>
   </section>
 
-  <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。デッドカードがあるプリフロップだけはボードをサンプリングし、95%信頼区間（±）を併記します。エクイティはチョップを 1/2 として計算しています。</p>
+  <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <div class="tip" id="tip"></div>
 <dialog class="dlg helpdlg" id="helpdlg" aria-labelledby="helpttl">
@@ -388,17 +363,16 @@ th:first-child,td:first-child{text-align:left}
       <li>右上で「ハンド vs レンジ」と「レンジ vs レンジ」（どちらもヘッズアップ）を切り替えます。</li>
       <li>ヒーロー欄は、ハンド vs レンジなら2枚のハンド、レンジ vs レンジならレンジの入力になります。</li>
     </ul>
-    <h3>カード（ボード・デッド・ヒーローのハンド）</h3>
+    <h3>カード（ボード・ヒーローのハンド）</h3>
     <ul>
       <li>枠をクリックするとカードを選ぶ画面が開きます。続けて選ぶと次の枠に進みます。</li>
       <li>埋まった枠をクリックすると、そのカードを差し替えたり外したりできます。</li>
       <li>ボードは0枚（プリフロップ）・3枚・4枚・5枚のどれでも構いません。</li>
-      <li>デッドは誰の手にもボードにも来ないカード（フォールドされた手など）です。</li>
     </ul>
     <h3>レンジ</h3>
     <ul>
       <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
-      <li>「塗るウェイト」を下げると部分的なレンジになります。マスの塗りの高さがウェイトです。</li>
+      <li>テキストでウェイトを付けると部分的なレンジになります。マスの塗りの高さがウェイトです。</li>
       <li>グリッド上のスライダーは上位n%のハンドを一括で選びます。その順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
       <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
     </ul>
@@ -407,7 +381,6 @@ th:first-child,td:first-child{text-align:left}
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
-      <li>デッドカードがあるプリフロップだけはボードをサンプリングします。結果欄の「高精度で再計算」で誤差を小さくできます。</li>
     </ul>
   </div>
 </dialog>
@@ -705,13 +678,15 @@ const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 /* ================= state ================= */
 /* mode 'hand': hero's two cards vs ranges[1]. mode 'range': ranges[0] vs
    ranges[1], each edited in its own panel RP[k], hero's first. */
-let hero=[], board=[], dead=[], activeSlot=null; // the slot the open picker fills
+/* dead cards have no input for now; the engine still takes them */
+const dead=[];
+let hero=[], board=[], activeSlot=null; // the slot the open picker fills
 let mode='hand', hmSide=1; // hmSide: the range the heatmap shows
 const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
 const ranges=[newRange(),newRange()];
 let precision=2000, lastRes=null;
-const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'},dead:{cap:4,label:'デッド'}};
-const cardsOf=k=>k==='hero'?hero:k==='board'?board:dead;
+const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'}};
+const cardsOf=k=>k==='hero'?hero:board;
 /* Rows keep their cards in place: taking one out leaves a hole (null) rather
    than sliding the rest left, so live() is what the engine and labels see. */
 const live=a=>a.filter(c=>c!=null);
@@ -721,12 +696,11 @@ function holeOf(kind,from){const arr=cardsOf(kind),cap=SLOTS[kind].cap;
 
 /* ---- DOM build ---- */
 const $=id=>document.getElementById(id);
-const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), deadSlots=$('deadSlots'), picker=$('picker'), hmEl=$('hm');
+const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), picker=$('picker'), hmEl=$('hm');
 function buildSlots(){
-  heroSlots.innerHTML='';boardSlots.innerHTML='';deadSlots.innerHTML='';
+  heroSlots.innerHTML='';boardSlots.innerHTML='';
   for(let i=0;i<2;i++)heroSlots.appendChild(mkSlot('hero',i));
   for(let i=0;i<5;i++)boardSlots.appendChild(mkSlot('board',i));
-  for(let i=0;i<4;i++)deadSlots.appendChild(mkSlot('dead',i));
 }
 function mkSlot(kind,i){
   const b=document.createElement('button');b.className='slot';b.dataset.kind=kind;b.dataset.i=i;
@@ -763,7 +737,7 @@ function pickCard(c){
 /* A card already in play is taken back out of whichever row holds it, leaving
    a hole where it was; the open slot stays where it is. */
 function unpickCard(c){
-  for(const k of mode==='hand'?['hero','board','dead']:['board','dead']){
+  for(const k of mode==='hand'?['hero','board']:['board']){
     const arr=cardsOf(k),j=arr.indexOf(c);if(j<0)continue;
     arr[j]=null;schedule();render();return;
   }
@@ -886,8 +860,6 @@ function wirePanel(P){
   g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);
   const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
   P.slider.addEventListener('input',()=>top(+P.slider.value));
-  const wb=q('wbtns');
-  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);q('wcur').textContent=b.textContent;});
   for(const [label,pct] of PRESETS){
     const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
     b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
@@ -946,16 +918,13 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
-  for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
-  const nd=live(dead).length;$('deadCur').textContent=nd?' '+nd+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
   $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!=null?'を差し替え':'')+
     (live(arr).length?' <span class="sub">'+handStr(live(arr))+'</span>':'');
   $('pickRemove').hidden=cur==null;
-  $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':
-    kind==='dead'?'デッドは誰の手にもボードにも来ないカード（最大4枚）。':'';
+  $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':'';
 }
 /* Hero's cards only count in hand mode; in range mode they are hidden and ignored. */
 function usedCards(){return new Set(live([...(mode==='hand'?hero:[]),...board,...dead]));}
@@ -1103,11 +1072,11 @@ function drawLegend(){
 }
 
 /* ---- persistence ---- */
-function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,dead,mode,hm:hmSide,
+function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
-  hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);dead=(s.dead||[]).slice(0,4);
+  hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<2;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
@@ -1145,7 +1114,6 @@ $('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('precBtn').addEventListener('click',()=>{precision=precision>2000?2000:10000;$('precBtn').hidden=true;run();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
-$('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
 
 /* ---- boot ---- */
 applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();

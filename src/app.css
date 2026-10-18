@@ -126,11 +126,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .grp.inl>.grphd{display:contents}
 .grp.inl>.grphd>.tbtn{order:1}
 .lbl{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-.slots{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
-/* Dead cards are rarely used, so they stay folded; the summary counts the
-   ones in play so a folded row never hides cards that change the result. */
-.deaddet{flex-basis:100%;margin-top:0}
-.deaddet[open]>summary{margin-bottom:8px}
+.slots{display:flex;flex-wrap:wrap;gap:12px}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:2px}
 .pc{aspect-ratio:3/4;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.05;font-size:clamp(8px,calc((100cqw - 24px)/13*.55),26px)}
 .pc .r{font-weight:700;letter-spacing:-.02em}
@@ -175,11 +171,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* controls */
 .ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
 .ctl-block{display:flex;flex-direction:column;gap:5px;min-width:0}
-/* Painting at less than full weight is rare, so its buttons stay folded; the
-   summary still shows the weight in force so a lowered one is not forgotten. */
-.wdet{margin-top:0}
-.wdet[open]>summary{margin-bottom:5px}
-.wcur{font-family:var(--ff-num)}
 .sliderow{display:flex;align-items:center;gap:9px}
 /* The slider takes the row's spare width: 0-100% in 0.1 steps needs the pixels,
    and on a phone a fixed 120px made each pixel almost a whole percent. */

@@ -38,13 +38,15 @@ const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 /* ================= state ================= */
 /* mode 'hand': hero's two cards vs ranges[1]. mode 'range': ranges[0] vs
    ranges[1], each edited in its own panel RP[k], hero's first. */
-let hero=[], board=[], dead=[], activeSlot=null; // the slot the open picker fills
+/* dead cards have no input for now; the engine still takes them */
+const dead=[];
+let hero=[], board=[], activeSlot=null; // the slot the open picker fills
 let mode='hand', hmSide=1; // hmSide: the range the heatmap shows
 const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
 const ranges=[newRange(),newRange()];
 let precision=2000, lastRes=null;
-const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'},dead:{cap:4,label:'デッド'}};
-const cardsOf=k=>k==='hero'?hero:k==='board'?board:dead;
+const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'}};
+const cardsOf=k=>k==='hero'?hero:board;
 /* Rows keep their cards in place: taking one out leaves a hole (null) rather
    than sliding the rest left, so live() is what the engine and labels see. */
 const live=a=>a.filter(c=>c!=null);
@@ -54,12 +56,11 @@ function holeOf(kind,from){const arr=cardsOf(kind),cap=SLOTS[kind].cap;
 
 /* ---- DOM build ---- */
 const $=id=>document.getElementById(id);
-const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), deadSlots=$('deadSlots'), picker=$('picker'), hmEl=$('hm');
+const heroSlots=$('heroSlots'), boardSlots=$('boardSlots'), picker=$('picker'), hmEl=$('hm');
 function buildSlots(){
-  heroSlots.innerHTML='';boardSlots.innerHTML='';deadSlots.innerHTML='';
+  heroSlots.innerHTML='';boardSlots.innerHTML='';
   for(let i=0;i<2;i++)heroSlots.appendChild(mkSlot('hero',i));
   for(let i=0;i<5;i++)boardSlots.appendChild(mkSlot('board',i));
-  for(let i=0;i<4;i++)deadSlots.appendChild(mkSlot('dead',i));
 }
 function mkSlot(kind,i){
   const b=document.createElement('button');b.className='slot';b.dataset.kind=kind;b.dataset.i=i;
@@ -96,7 +97,7 @@ function pickCard(c){
 /* A card already in play is taken back out of whichever row holds it, leaving
    a hole where it was; the open slot stays where it is. */
 function unpickCard(c){
-  for(const k of mode==='hand'?['hero','board','dead']:['board','dead']){
+  for(const k of mode==='hand'?['hero','board']:['board']){
     const arr=cardsOf(k),j=arr.indexOf(c);if(j<0)continue;
     arr[j]=null;schedule();render();return;
   }
@@ -219,8 +220,6 @@ function wirePanel(P){
   g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);
   const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
   P.slider.addEventListener('input',()=>top(+P.slider.value));
-  const wb=q('wbtns');
-  wb.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.paintW=+b.dataset.w;pressed(wb,b);q('wcur').textContent=b.textContent;});
   for(const [label,pct] of PRESETS){
     const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
     b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
@@ -279,16 +278,13 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
-  for(let i=0;i<4;i++)paintSlot(deadSlots.children[i],dead[i],on('dead',i));
-  const nd=live(dead).length;$('deadCur').textContent=nd?' '+nd+'枚':'';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
   $('pickttl').innerHTML=SLOTS[kind].label+' '+(i+1)+'枚目'+(cur!=null?'を差し替え':'')+
     (live(arr).length?' <span class="sub">'+handStr(live(arr))+'</span>':'');
   $('pickRemove').hidden=cur==null;
-  $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':
-    kind==='dead'?'デッドは誰の手にもボードにも来ないカード（最大4枚）。':'';
+  $('picknote').textContent=kind==='board'?'ボードは0・3・4・5枚のどれか。フロップだけなら3枚選んで閉じてください。':'';
 }
 /* Hero's cards only count in hand mode; in range mode they are hidden and ignored. */
 function usedCards(){return new Set(live([...(mode==='hand'?hero:[]),...board,...dead]));}
@@ -436,11 +432,11 @@ function drawLegend(){
 }
 
 /* ---- persistence ---- */
-function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,dead,mode,hm:hmSide,
+function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
-  hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);dead=(s.dead||[]).slice(0,4);
+  hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<2;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
@@ -478,7 +474,6 @@ $('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('precBtn').addEventListener('click',()=>{precision=precision>2000?2000:10000;$('precBtn').hidden=true;run();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
-$('clrDead').addEventListener('click',()=>{dead=[];render();schedule();});
 
 /* ---- boot ---- */
 applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();

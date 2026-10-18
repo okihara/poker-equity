@@ -61,7 +61,7 @@ npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8�
 
 - `onProgress(fraction, partialEquity)` — 進捗と暫定エクイティ（ランナウトをシャッフル順に回すので偏りのない推定）
 - `isStale()` — true を返すと中断して `{stale:true}` を返す
-- `mcBoards` — デッドカードありのプリフロップでのサンプルボード数（結果欄の「高精度で再計算」ボタン。モンテカルロの結果のときだけ出る）
+- `mcBoards` — デッドカードありのプリフロップでのサンプルボード数（結果欄の「高精度で再計算」ボタン。モンテカルロの結果のときだけ出る。今の UI はデッドカードの入力欄を出しておらず `dead` は常に空なので、このボタンは出ない）
 
 戻り値は `{equity, win, tie, lose, perCombo, opp:{equity, win, tie, lose, perCombo}, mode:'exact'|'mc', se, nRunouts, nCombos, nCombosOpp}`
 か `{error}` か `{stale:true}`。`perCombo` の各要素は `{a, b, w, eq, share}` で、`share` はそのコンボが占める
