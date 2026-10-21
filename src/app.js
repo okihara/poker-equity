@@ -245,15 +245,21 @@ function updateRangeInfo(P){
   const t=totalCombos(P.w);
   P.info.textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)';
 }
-function syncText(P){
+function rangeText(w){
   const parts=[];
-  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const w=P.w[i][j];
-    if(w>0)parts.push(CELLN[i][j]+(w<1?':'+w:''));}
-  P.text.value=parts.join(',');
+  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const x=w[i][j];
+    if(x>0)parts.push(CELLN[i][j]+(x<1?':'+x:''));}
+  return parts.join(',');
 }
+function syncText(P){P.text.value=rangeText(P.w);}
 function applyText(P){
-  const txt=P.text.value;
-  for(const r of P.w)r.fill(0);
+  const bad=parseRange(P.text.value,P.w);
+  repaintAll(P);schedule();
+  if(bad)flash(bad+'個のトークンを認識できませんでした。');
+}
+/* Overwrites w with the range txt spells; returns how many tokens it could not read. */
+function parseRange(txt,w){
+  for(const r of w)r.fill(0);
   let bad=0;
   for(let tok of txt.split(/[,\s]+/)){
     tok=tok.trim();if(!tok)continue;
@@ -265,12 +271,11 @@ function applyText(P){
     if(h.length<2||h.length>3){bad++;continue;}
     const nm=h[0].toUpperCase()+h[1].toUpperCase()+(h.length>2?h[2].toLowerCase():'');
     if(!(nm in NAME2IJ)){bad++;continue;}
-    let w=m[1]===undefined?1:parseFloat(m[1].replace('%',''))*(m[1].includes('%')?0.01:1);
-    if(!(w>0))w=0;if(w>1)w=1;
-    const [i,j]=NAME2IJ[nm];P.w[i][j]=w;
+    let x=m[1]===undefined?1:parseFloat(m[1].replace('%',''))*(m[1].includes('%')?0.01:1);
+    if(!(x>0))x=0;if(x>1)x=1;
+    const [i,j]=NAME2IJ[nm];w[i][j]=x;
   }
-  repaintAll(P);schedule();
-  if(bad)flash(bad+'個のトークンを認識できませんでした。');
+  return bad;
 }
 
 /* ---- render ---- */
@@ -444,6 +449,49 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
   return true;}catch(e){return false;}}
+
+/* ---- spots: named snapshots of mode, cards and both ranges, newest first ---- */
+const spotDlg=$('spotdlg');
+function loadSpots(){try{const s=JSON.parse(localStorage.getItem('eqspots'));return Array.isArray(s)?s.filter(x=>x&&typeof x.name==='string'):[];}catch(e){return [];}}
+function storeSpots(L){try{localStorage.setItem('eqspots',JSON.stringify(L));return true;}catch(e){return false;}}
+const cardStr=a=>live(a).map(c=>RANKS[c>>2]+SYM[c&3]).join('');
+function snapshot(){return {mode,hero:live(hero),board:live(board),r:ranges.map(rangeText),t:Date.now()};}
+/* what the spot is, as the default name and the line under each saved one */
+function spotDesc(s){
+  const pct=t=>{const w=newRange();parseRange(t||'',w);return (totalCombos(w)/13.26).toFixed(1)+'%';};
+  return (s.mode==='range'?pct(s.r[0]):cardStr(s.hero)||'?')+' vs '+pct(s.r[1])+(s.board.length?' / '+cardStr(s.board):'');
+}
+/* Cards come back only if they are real and unclaimed, so a hand-edited
+   store cannot put one card in two slots. */
+function applySpot(s){
+  const seen=new Set(),ok=c=>Number.isInteger(c)&&c>=0&&c<52&&!seen.has(c)&&seen.add(c);
+  board=(s.board||[]).filter(ok).slice(0,5);hero=(s.hero||[]).filter(ok).slice(0,2);
+  for(let k=0;k<2;k++)parseRange((s.r||[])[k]||'',ranges[k]);
+  spotDlg.close();setMode(s.mode==='range'?'range':'hand');save();run();
+}
+function drawSpots(){
+  const L=loadSpots(),ul=$('spotList');ul.innerHTML='';$('spotEmpty').hidden=L.length>0;
+  for(const s of L){
+    const li=document.createElement('li'),b=document.createElement('button'),d=document.createElement('button');
+    b.type='button';b.className='spotload';b.innerHTML='<span class="nm"></span><span class="sub"></span>';
+    b.firstChild.textContent=s.name;
+    b.lastChild.textContent=(s.mode==='range'?'レンジ vs レンジ':'ハンド vs レンジ')+' · '+spotDesc(s)+
+      (s.t?' · '+new Date(s.t).toLocaleDateString():'');
+    b.addEventListener('click',()=>applySpot(s));
+    d.type='button';d.className='tbtn spotdel';d.textContent='削除';d.setAttribute('aria-label','「'+s.name+'」を削除');
+    d.addEventListener('click',()=>{storeSpots(loadSpots().filter(x=>x.name!==s.name));$('spotMsg').textContent='「'+s.name+'」を削除しました。';drawSpots();});
+    li.append(b,d);ul.appendChild(li);
+  }
+}
+$('spotBtn').addEventListener('click',()=>{closeMenu();$('spotName').value='';$('spotName').placeholder=spotDesc(snapshot());
+  $('spotMsg').textContent='';drawSpots();spotDlg.showModal();});
+$('spotForm').addEventListener('submit',e=>{e.preventDefault();
+  const s=snapshot();s.name=$('spotName').value.trim()||spotDesc(s);
+  const L=loadSpots(),over=L.some(x=>x.name===s.name);
+  if(!storeSpots([s,...L.filter(x=>x.name!==s.name)])){$('spotMsg').textContent='このブラウザでは保存できませんでした。';return;}
+  $('spotMsg').textContent='「'+s.name+'」を'+(over?'上書き':'保存')+'しました。';$('spotName').value='';drawSpots();});
+$('spotClose').addEventListener('click',()=>spotDlg.close());
+onBackdrop(spotDlg,()=>spotDlg.close());
 
 /* ---- mode and heatmap side ---- */
 const pressed=(box,el)=>{for(const x of box.children)x.setAttribute('aria-pressed',x===el?'true':'false');};

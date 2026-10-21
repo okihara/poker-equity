@@ -15,6 +15,7 @@
           <button data-t="light" aria-pressed="false">ライト</button>
           <button data-t="dark" aria-pressed="false">ダーク</button>
         </div>
+        <button class="menuitem" id="spotBtn" type="button" aria-haspopup="dialog">スポットの保存・呼び出し</button>
         <button class="menuitem" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
       </div>
     </div>
@@ -145,6 +146,11 @@
       <li>グリッド上のスライダーは上位n%のハンドを一括で選びます。その順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
       <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
     </ul>
+    <h3>スポット</h3>
+    <ul>
+      <li>メニューの「スポットの保存・呼び出し」で、モード・ボード・ヒーローのハンド・両方のレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
+      <li>名前を空欄にすると「A♠K♠ vs 14.8%」のような名前が自動で付きます。保存先はこのブラウザだけです。</li>
+    </ul>
     <h3>結果とハンド別エクイティ</h3>
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。</li>
@@ -152,6 +158,20 @@
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
   </div>
+</dialog>
+<dialog class="dlg spotdlg" id="spotdlg" aria-labelledby="spotttl">
+  <div class="dlghd">
+    <h2 class="dlgttl" id="spotttl">スポット</h2>
+    <button class="tbtn" id="spotClose" type="button" autofocus>閉じる</button>
+  </div>
+  <form class="spotsave" id="spotForm">
+    <input type="text" id="spotName" maxlength="60" autocomplete="off" aria-label="保存するスポットの名前">
+    <button class="tbtn" type="submit">今の状態を保存</button>
+  </form>
+  <div class="note spotmsg" id="spotMsg" role="status"></div>
+  <ul class="spotlist" id="spotList" aria-label="保存したスポット"></ul>
+  <div class="note" id="spotEmpty">保存したスポットはまだありません。</div>
+  <div class="note">モード・ボード・ヒーローのハンド・両方のレンジを保存します。同じ名前で保存すると上書きします。保存先はこのブラウザだけです。</div>
 </dialog>
 <dialog class="dlg pickdlg" id="pickdlg" aria-labelledby="pickttl">
   <div class="dlghd">

@@ -143,6 +143,18 @@ button{font:inherit;color:inherit;cursor:pointer}
    default 16px margin and pad the sides only enough to keep the border. */
 .pickdlg{width:min(760px,calc(100vw - 8px));padding:10px 4px}
 .pickdlg .dlghd,.pickdlg .note{padding:0 4px}
+.spotdlg{max-height:calc(100vh - 32px)}
+.spotsave{display:flex;gap:6px}
+/* 16px keeps iOS from zooming in on focus */
+.spotsave input{flex:1;min-width:0;font:inherit;font-size:16px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--ink)}
+.spotmsg{min-height:1.5em}
+.spotlist{list-style:none;margin:4px 0 0;padding:0;max-height:min(55vh,440px);overflow:auto}
+.spotlist li{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:4px 0}
+.spotload{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:0;background:transparent;text-align:left;padding:6px 2px}
+.spotload .nm{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.spotload:hover .nm{color:var(--hero)}
+.spotload .sub{font-size:11px;font-family:var(--ff-num);color:var(--ink-3);overflow-wrap:anywhere}
+.tbtn.spotdel{color:var(--clear);background:var(--clear-soft);border-color:var(--clear-line)}
 .helpbody h3{font-size:12px;font-weight:600;color:var(--ink-2);margin:12px 0 4px}
 .helpbody h3:first-child{margin-top:0}
 .helpbody ul{margin:0;padding-left:1.2em;font-size:12.5px;line-height:1.7;color:var(--ink-2)}
