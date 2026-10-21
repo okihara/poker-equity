@@ -45,7 +45,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* iOS blurs the strip under the status bar, so the header starts below it
    there (-webkit-touch-callout is iOS-only). */
 @supports(-webkit-touch-callout:none){.hd{padding-top:28px}}
-.menu{position:relative;margin-left:auto}
+.menu{position:relative;margin-left:auto;display:flex;gap:6px}
 .tbtn.menubtn{display:flex;align-items:center;padding:10px}
 .menupop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:200px;display:flex;flex-direction:column;gap:6px;
   padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow)}
@@ -53,6 +53,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .menuitem{border:0;border-top:1px solid var(--line);background:transparent;text-align:left;padding:8px 2px 2px;font-size:12.5px;margin-top:4px}
 .menuitem:hover{color:var(--hero)}
 .segbtns.modebtns button{font-size:14px;font-weight:600;font-family:var(--ff-ui);padding:9px 16px}
+/* narrow enough that the mode buttons, spot and menu stay on one row on a phone */
+@media(max-width:420px){.segbtns.modebtns button{padding:9px 12px}}
 .modebtns button[aria-pressed=true]{background:var(--hero)}
 .hmtitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .hmtitle h2.seclabel{margin:0}
@@ -250,6 +252,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
     </div>
     <div class="menu">
+      <button class="tbtn menubtn" id="spotBtn" type="button" aria-label="スポットの保存・呼び出し" title="スポットの保存・呼び出し" aria-haspopup="dialog"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 2.5h8v11l-4-3-4 3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
       <button class="tbtn menubtn" id="menuBtn" type="button" aria-label="メニュー" aria-expanded="false" aria-controls="menuPop"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       <div class="menupop" id="menuPop" hidden>
         <div class="lbl">テーマ</div>
@@ -258,7 +261,6 @@ th:first-child,td:first-child{text-align:left}
           <button data-t="light" aria-pressed="false">ライト</button>
           <button data-t="dark" aria-pressed="false">ダーク</button>
         </div>
-        <button class="menuitem" id="spotBtn" type="button" aria-haspopup="dialog">スポットの保存・呼び出し</button>
         <button class="menuitem" id="helpBtn" type="button" aria-haspopup="dialog">ヘルプ</button>
       </div>
     </div>
@@ -391,7 +393,7 @@ th:first-child,td:first-child{text-align:left}
     </ul>
     <h3>スポット</h3>
     <ul>
-      <li>メニューの「スポットの保存・呼び出し」で、モード・ボード・ヒーローのハンド・両方のレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
+      <li>右上のしおりのボタン（スポットの保存・呼び出し）で、モード・ボード・ヒーローのハンド・両方のレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
       <li>名前を空欄にすると「A♠K♠ vs 14.8%」のような名前が自動で付きます。保存先はこのブラウザだけです。</li>
     </ul>
     <h3>結果とハンド別エクイティ</h3>
