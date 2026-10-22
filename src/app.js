@@ -287,6 +287,9 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
+  const faces=a=>a.map(c=>'<span class="'+faceCls(c).trim()+'">'+face(c)+'</span>').join(''),B=live(board),H=mode==='hand'?live(hero):[];
+  $('stickHero').innerHTML=faces(H);$('stickHero').hidden=!H.length;
+  $('stickBoard').innerHTML=B.length?faces(B):'<span class="stickpf">プリフロップ</span>';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
@@ -551,6 +554,16 @@ $('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('precBtn').addEventListener('click',()=>{precision=precision>2000?2000:10000;$('precBtn').hidden=true;run();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
+
+/* ---- sticky hand, board and equity ---- */
+/* The bar copies #eqv (final, interim or cleared) rather than being written
+   alongside it, and shows once the board panel is wholly above the viewport. */
+const stick=$('stick'),eqBox=$('eqv').parentNode;
+new MutationObserver(()=>{$('stickEq').textContent=$('eqv').textContent;stick.classList.toggle('interim',eqBox.classList.contains('interim'));})
+  .observe(eqBox,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRect.bottom<0;
+  stick.classList.toggle('on',on);stick.setAttribute('aria-hidden',on?'false':'true');}).observe($('boardPanel'));
+stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 /* ---- boot ---- */
 applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();

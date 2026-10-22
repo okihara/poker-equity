@@ -70,6 +70,21 @@ button{font:inherit;color:inherit;cursor:pointer}
   .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
 .bignum.interim .v,.bignum.interim .pct{opacity:.5}
+/* sticky hand, board and equity: off-screen until the board panel scrolls away */
+.stick{position:fixed;top:0;left:0;right:0;z-index:30;padding-top:env(safe-area-inset-top,0px);background:var(--surface);
+  border-bottom:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;transform:translateY(-110%);visibility:hidden;transition:transform .18s ease,visibility .18s}
+.stick.on{transform:none;visibility:visible}
+.stickin{max-width:1180px;margin:0 auto;padding:6px 10px;display:flex;align-items:center;gap:8px}
+.stickcards{display:flex;gap:4px}
+/* Hero's hand sits on a tray in hero's colour, which parts it from the board
+   without a label, so a full board still fits a phone. */
+#stickHero{padding:3px;margin-right:6px;border-radius:7px;background:var(--hero-soft);box-shadow:inset 0 0 0 1px var(--hero)}
+.stickcards .fc{width:28px;height:38px;font-size:38px;border-radius:5px}
+.stickpf{font-size:12px;color:var(--ink-2)}
+.stickeq{margin-left:auto;display:flex;align-items:baseline;gap:2px;font-weight:700;color:var(--hero);font-variant-numeric:tabular-nums}
+.stickeq #stickEq{font-size:24px;letter-spacing:-.03em;line-height:1}
+.stickeq .pct{font-size:13px}
+.stick.interim .stickeq{opacity:.5}
 
 /* panels */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;box-shadow:var(--shadow)}
@@ -398,6 +413,11 @@ th:first-child,td:first-child{text-align:left}
 
   <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
+<!-- Hero's hand (hand mode), board and equity, pinned to the top once the board panel scrolls away. -->
+<div class="stick" id="stick" aria-hidden="true"><div class="stickin">
+  <span class="stickcards" id="stickHero"></span><span class="stickcards" id="stickBoard"></span>
+  <span class="stickeq"><span id="stickEq">–</span><span class="pct">%</span></span>
+</div></div>
 <div class="tip" id="tip"></div>
 <dialog class="dlg helpdlg" id="helpdlg" aria-labelledby="helpttl">
   <div class="dlghd">
@@ -1019,6 +1039,9 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
+  const faces=a=>a.map(c=>'<span class="'+faceCls(c).trim()+'">'+face(c)+'</span>').join(''),B=live(board),H=mode==='hand'?live(hero):[];
+  $('stickHero').innerHTML=faces(H);$('stickHero').hidden=!H.length;
+  $('stickBoard').innerHTML=B.length?faces(B):'<span class="stickpf">プリフロップ</span>';
   if(!activeSlot)return;
   const {kind,i}=activeSlot,arr=cardsOf(kind),cur=arr[i],used=usedCards();
   for(const b of picker.children){const c=+b.dataset.c;const u=used.has(c);b.classList.toggle('used',u);b.title=u?'クリックで外す':'';b.classList.toggle('cur',c===cur);}
@@ -1283,6 +1306,16 @@ $('hmbtns').addEventListener('click',e=>{const b=e.target.closest('button');if(!
 $('precBtn').addEventListener('click',()=>{precision=precision>2000?2000:10000;$('precBtn').hidden=true;run();});
 $('clrHero').addEventListener('click',()=>{hero=[];render();schedule();});
 $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
+
+/* ---- sticky hand, board and equity ---- */
+/* The bar copies #eqv (final, interim or cleared) rather than being written
+   alongside it, and shows once the board panel is wholly above the viewport. */
+const stick=$('stick'),eqBox=$('eqv').parentNode;
+new MutationObserver(()=>{$('stickEq').textContent=$('eqv').textContent;stick.classList.toggle('interim',eqBox.classList.contains('interim'));})
+  .observe(eqBox,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRect.bottom<0;
+  stick.classList.toggle('on',on);stick.setAttribute('aria-hidden',on?'false':'true');}).observe($('boardPanel'));
+stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 /* ---- boot ---- */
 applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();

@@ -130,6 +130,11 @@
 
   <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
+<!-- Hero's hand (hand mode), board and equity, pinned to the top once the board panel scrolls away. -->
+<div class="stick" id="stick" aria-hidden="true"><div class="stickin">
+  <span class="stickcards" id="stickHero"></span><span class="stickcards" id="stickBoard"></span>
+  <span class="stickeq"><span id="stickEq">–</span><span class="pct">%</span></span>
+</div></div>
 <div class="tip" id="tip"></div>
 <dialog class="dlg helpdlg" id="helpdlg" aria-labelledby="helpttl">
   <div class="dlghd">
