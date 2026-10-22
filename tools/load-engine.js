@@ -13,7 +13,7 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const EXPORTS = ['eval7', 'makeRng', 'computeEquity', 'computeRangeEquity', 'cellCombos', 'cellName', 'cellOf',
   'pfInit', 'PF_BOARDS',
-  'comboCount', 'cardName', 'RANKS', 'SUITS', 'RANK_ORDER', 'NAME2IJ', 'CELLN',
+  'comboCount', 'cardName', 'evalN', 'madeHands', 'handLabel', 'RANKS', 'SUITS', 'RANK_ORDER', 'NAME2IJ', 'CELLN',
   /* internals, so the tests can check the lookup tables and the category
      packing directly rather than only through eval7's output */
   'STRAIGHT', 'PACK5', 'POPC', 'CAT'];

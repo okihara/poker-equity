@@ -343,6 +343,7 @@ function rawRange(w){const raw=[];
   return raw;}
 async function run(){
   const my=++token;
+  drawMade();
   const H=live(hero),nb=live(board).length;
   if(mode==='hand'&&H.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
   if(nb===1||nb===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
@@ -421,6 +422,29 @@ function drawHeat(r){
   rows.sort((x,y)=>x[1]-y[1]);
   $('tbl').querySelector('tbody').innerHTML=rows.map(x=>
     '<tr><td>'+x[0]+'</td><td>'+(x[1]*100).toFixed(2)+'%</td><td>'+x[2]+'</td><td>'+Math.round(x[3]*100)+'%</td></tr>').join('');
+}
+/* Villain's range as the hands it makes on this board, strongest first, with
+   hero's hand slotted in where it ranks. Weighted combo counts throughout, so
+   "above hero" reads as a share of the range, not of the rows. */
+function drawMade(){
+  const B=live(board),H=live(hero),show=B.length>=3,b=rawRange(ranges[1]);$('mhPanel').hidden=!show;
+  if(!show)return;
+  const me=mode==='hand'&&H.length===2,G=madeHands(b,B,[...live(dead),...(me?H:[])]);
+  const fmt=t=>t.toFixed(t%1?1:0),tot=G.reduce((s,g)=>s+g.w,0),pct=x=>tot>0?(x/tot*100).toFixed(1)+'%':'–';
+  const hv=me?evalN([...H,...B]):-1,rows=[];let acc=0,above=-1,tie=0;
+  const heroRow=()=>{above=acc;rows.push('<tr class="me"><td>'+handLabel(hv)+'</td><td colspan="2">ヒーロー</td><td>'+handStr(H)+'</td></tr>');};
+  for(const g of G){
+    if(me&&above<0&&g.v<=hv)heroRow();
+    if(g.v===hv)tie=g.w;
+    acc+=g.w;
+    const cells=new Map();
+    for(const [x,y] of g.combos){const [i,j]=cellOf(x,y),n=CELLN[i][j];cells.set(n,(cells.get(n)||[]).concat(cardName(Math.max(x,y))+cardName(Math.min(x,y))));}
+    rows.push('<tr><td>'+handLabel(g.v)+'</td><td>'+fmt(g.w)+'</td><td>'+pct(acc)+'</td><td>'+
+      [...cells].map(([n,cs])=>'<span title="'+cs.join(' ')+'">'+n+(cs.length<comboCount(n)?'×'+cs.length:'')+'</span>').join(' ')+'</td></tr>');
+  }
+  if(me&&above<0)heroRow();
+  $('mhtbl').querySelector('tbody').innerHTML=rows.join('')||'<tr><td colspan="4">相手のレンジにコンボがありません</td></tr>';
+  $('mhCur').textContent=me&&tot>0?' — 上に '+fmt(above)+'/'+fmt(tot)+'コンボ（'+pct(above)+'）'+(tie>0?'・同じ強さ '+fmt(tie):''):'';
 }
 /* tooltip */
 const tip=$('tip');

@@ -121,3 +121,29 @@ async function computeRangeEquity(rawA,rawB,board,dead,opts){
     se=sd>0?Math.sqrt(v/(N*(N-1)))/(sd/N):0;}
   return rvrResult(A,B,wA,tA,nA,wB,tB,nB,{mode:mc?'mc':'exact',se,nRunouts:N});
 }
+/* ================= made hands ================= */
+/* Strength of the best hand in 5..7 cards. eval7 only ORs cards into suit
+   masks, so repeating a card changes nothing: a short hand is padded with its
+   last card. */
+function evalN(cs){const n=cs.length,c=i=>cs[i<n?i:n-1];return eval7(c(0),c(1),c(2),c(3),c(4),c(5),c(6));}
+/* The combos of a range as the hands they make on this board right now, strongest
+   first, one group per strength: [{v,w,combos:[[c0,c1,w],...]}]. Duplicates are
+   merged and combos holding a used card dropped, as rvrPrep does. */
+function madeHands(raw,board,used){
+  const u=new Uint8Array(52);for(const c of board)u[c]=1;for(const c of used)u[c]=1;
+  const R=rvrPrep(raw,u),g=new Map();
+  for(let i=0;i<R.n;i++){const v=evalN([R.c0[i],R.c1[i],...board]);let e=g.get(v);
+    if(!e){e={v,w:0,combos:[]};g.set(v,e);}e.w+=R.w[i];e.combos.push([R.c0[i],R.c1[i],R.w[i]]);}
+  return [...g.values()].sort((x,y)=>y.v-x.v);}
+/* "ワンペア QQ (A 9 5)" from an eval7 strength */
+const HCAT=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
+function handLabel(v){const t=Math.floor(v/CAT),r=v%CAT,nb=k=>RANKS[(r>>(4*k))&15],rep=(x,n)=>x.repeat(n),ks=(a,b)=>{const o=[];for(let k=a;k>=b;k--)o.push(nb(k));return o.join(' ');};
+  switch(t){
+    case 8:return nb(4)==='A'?'ロイヤルフラッシュ':HCAT[8]+' '+nb(4)+'ハイ';
+    case 7:return HCAT[7]+' '+rep(nb(4),4)+' ('+nb(3)+')';
+    case 6:return HCAT[6]+' '+rep(nb(4),3)+'-'+rep(nb(3),2);
+    case 5:case 0:return HCAT[t]+' '+ks(4,0);
+    case 4:return HCAT[4]+' '+nb(4)+'ハイ';
+    case 3:return HCAT[3]+' '+rep(nb(4),3)+' ('+ks(3,2)+')';
+    case 2:return HCAT[2]+' '+rep(nb(4),2)+'-'+rep(nb(3),2)+' ('+nb(2)+')';
+    default:return HCAT[1]+' '+rep(nb(4),2)+' ('+ks(3,1)+')';}}
