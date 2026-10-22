@@ -253,9 +253,12 @@ th:first-child,td:first-child{text-align:left}
 .mhdet[open]>summary{margin-bottom:6px}
 #mhCur{font-family:var(--ff-num);color:var(--hero)}
 .mhwrap{max-height:min(60vh,520px);overflow-y:auto}
+/* sized to its content, so the numbers sit right next to the hands */
+#mhtbl{width:auto}
 #mhtbl th{position:sticky;top:0;background:var(--surface)}
 #mhtbl td:first-child{font-family:var(--ff-ui)}
-#mhtbl td:last-child{text-align:left;white-space:normal;color:var(--ink-2);min-width:180px}
+#mhtbl th:nth-child(2){text-align:left}
+#mhtbl td:nth-child(2){text-align:left;white-space:normal;min-width:180px}
 #mhtbl tr.me td{background:var(--hero-soft);color:var(--hero);font-weight:600}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
@@ -365,7 +368,7 @@ th:first-child,td:first-child{text-align:left}
     <details class="mhdet" id="mhdet">
       <summary>相手のレンジの役ランキング<span id="mhCur"></span></summary>
       <div class="note" style="margin:0">このボードで相手のレンジの各コンボが今できている役を、強い順に並べたもの。累計は上からのコンボ数の割合です。</div>
-      <div class="tblwrap mhwrap"><table id="mhtbl"><thead><tr><th>役</th><th>コンボ</th><th>累計</th><th>ハンド</th></tr></thead><tbody></tbody></table></div>
+      <div class="tblwrap mhwrap"><table id="mhtbl"><thead><tr><th>役</th><th>ハンド</th><th>コンボ</th><th>累計</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
 
@@ -1165,15 +1168,16 @@ function drawMade(){
   const me=mode==='hand'&&H.length===2,G=madeHands(b,B,[...live(dead),...(me?H:[])]);
   const fmt=t=>t.toFixed(t%1?1:0),tot=G.reduce((s,g)=>s+g.w,0),pct=x=>tot>0?(x/tot*100).toFixed(1)+'%':'–';
   const hv=me?evalN([...H,...B]):-1,rows=[];let acc=0,above=-1,tie=0;
-  const heroRow=()=>{above=acc;rows.push('<tr class="me"><td>'+handLabel(hv)+'</td><td colspan="2">ヒーロー</td><td>'+handStr(H)+'</td></tr>');};
+  const heroRow=()=>{above=acc;rows.push('<tr class="me"><td>'+handLabel(hv)+'</td><td>'+handStr(H)+'</td><td colspan="2">ヒーロー</td></tr>');};
   for(const g of G){
     if(me&&above<0&&g.v<=hv)heroRow();
     if(g.v===hv)tie=g.w;
     acc+=g.w;
     const cells=new Map();
     for(const [x,y] of g.combos){const [i,j]=cellOf(x,y),n=CELLN[i][j];cells.set(n,(cells.get(n)||[]).concat(cardName(Math.max(x,y))+cardName(Math.min(x,y))));}
-    rows.push('<tr><td>'+handLabel(g.v)+'</td><td>'+fmt(g.w)+'</td><td>'+pct(acc)+'</td><td>'+
-      [...cells].map(([n,cs])=>'<span title="'+cs.join(' ')+'">'+n+(cs.length<comboCount(n)?'×'+cs.length:'')+'</span>').join(' ')+'</td></tr>');
+    rows.push('<tr><td>'+handLabel(g.v)+'</td><td>'+
+      [...cells].map(([n,cs])=>'<span title="'+cs.join(' ')+'">'+n+(cs.length<comboCount(n)?'×'+cs.length:'')+'</span>').join(' ')+
+      '</td><td>'+fmt(g.w)+'</td><td>'+pct(acc)+'</td></tr>');
   }
   if(me&&above<0)heroRow();
   $('mhtbl').querySelector('tbody').innerHTML=rows.join('')||'<tr><td colspan="4">相手のレンジにコンボがありません</td></tr>';

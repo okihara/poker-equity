@@ -247,9 +247,12 @@ th:first-child,td:first-child{text-align:left}
 .mhdet[open]>summary{margin-bottom:6px}
 #mhCur{font-family:var(--ff-num);color:var(--hero)}
 .mhwrap{max-height:min(60vh,520px);overflow-y:auto}
+/* sized to its content, so the numbers sit right next to the hands */
+#mhtbl{width:auto}
 #mhtbl th{position:sticky;top:0;background:var(--surface)}
 #mhtbl td:first-child{font-family:var(--ff-ui)}
-#mhtbl td:last-child{text-align:left;white-space:normal;color:var(--ink-2);min-width:180px}
+#mhtbl th:nth-child(2){text-align:left}
+#mhtbl td:nth-child(2){text-align:left;white-space:normal;min-width:180px}
 #mhtbl tr.me td{background:var(--hero-soft);color:var(--hero);font-weight:600}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
