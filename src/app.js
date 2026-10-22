@@ -68,17 +68,21 @@ function mkSlot(kind,i){
   b.addEventListener('click',()=>openPicker(kind,i));
   return b;
 }
+/* A four-colour card face: the suit's colour fills the card, the corner index
+   stacks rank over suit and a big rank sits bottom right. U+FE0E keeps iOS from
+   drawing the suits as emoji, which would ignore the white ink. */
+const faceCls=c=>' fc f-'+SCLS[c&3];
+function face(c){const r=RANKS[c>>2]==='T'?'10':RANKS[c>>2];
+  return '<span class="ix"><b>'+r+'</b><i>'+SYM[c&3]+'\uFE0E</i></span><span class="big">'+r+'</span>';}
 function paintSlot(el,card,active){
-  el.classList.toggle('filled',card!=null);
-  el.classList.toggle('active',active);
-  if(card==null){el.innerHTML='<span class="ph">+</span>';}
-  else{el.innerHTML='<span class="r">'+RANKS[card>>2]+'</span><span class="s '+SCLS[card&3]+'">'+SYM[card&3]+'</span>';}
+  el.className='slot'+(card!=null?' filled'+faceCls(card):'')+(active?' active':'');
+  el.innerHTML=card==null?'<span class="ph">+</span>':face(card);
 }
 function buildPicker(){
   picker.innerHTML='';
   for(let s=3;s>=0;s--)for(let r=12;r>=0;r--){
-    const c=(r<<2)|s;const b=document.createElement('button');b.type='button';b.className='pc';b.dataset.c=c;
-    b.innerHTML='<span class="r">'+RANKS[r]+'</span><span class="'+SCLS[s]+'">'+SYM[s]+'</span>';
+    const c=(r<<2)|s;const b=document.createElement('button');b.type='button';b.className='pc'+faceCls(c);b.dataset.c=c;
+    b.innerHTML=face(c);
     b.setAttribute('aria-label',RANKS[r]+SYM[s]);
     b.addEventListener('click',()=>pickCard(c));
     picker.appendChild(b);

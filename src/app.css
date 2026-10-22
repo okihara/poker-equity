@@ -8,6 +8,8 @@
   --clear:#c23a3a; --clear-soft:#fcecec; --clear-line:#efc4c4;
   --pole-hi:#2a78d6; --pole-lo:#d03b3b; --pole-mid:#eceef1;
   --spade:#0e1620; --heart:#d03b3b; --diamond:#2a78d6; --club:#0ca30c;
+  /* card faces look the same in both themes, like real cards */
+  --card-sp:#2b2c2f; --card-he:#a5322b; --card-di:#23559e; --card-cl:#2e7a2b;
   --shadow:0 1px 2px rgba(14,22,32,.06),0 8px 24px -16px rgba(14,22,32,.24);
   --ff-ui:"Archivo","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   --ff-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -115,10 +117,19 @@ button{font:inherit;color:inherit;cursor:pointer}
 /* ---- cards ---- */
 .slotrow{display:flex;gap:6px;flex-wrap:wrap}
 .slot{width:40px;height:54px;border-radius:7px;border:1.5px dashed var(--line-2);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:0;line-height:1}
-.slot.filled{border-style:solid;border-color:var(--line-2);background:var(--surface)}
 .slot.active{border-color:var(--hero);border-style:solid;box-shadow:0 0 0 3px var(--hero-soft)}
-.slot .r{font-family:var(--ff-ui);font-size:17px;font-weight:700;letter-spacing:-.02em}
-.slot .s{font-size:15px;line-height:1}
+.slot.fc{font-size:54px}
+.slot.fc.active{border-color:var(--hero);box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--hero)}
+/* Card face. Everything is in em of the card's height (the font-size the slot
+   or picker gives it), so one layout serves every size. */
+.fc{position:relative;display:block;padding:0;color:#fff;font-family:"Roboto Condensed",var(--ff-ui);font-weight:700;overflow:hidden;
+  border:1px solid rgba(0,0,0,.35);background:linear-gradient(rgba(255,255,255,.1),rgba(0,0,0,.08)),var(--fc);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 2px rgba(0,0,0,.25)}
+.f-sp{--fc:var(--card-sp)}.f-he{--fc:var(--card-he)}.f-di{--fc:var(--card-di)}.f-cl{--fc:var(--card-cl)}
+.fc .ix{position:absolute;left:.03em;top:.05em;width:.24em;display:flex;flex-direction:column;align-items:center;line-height:1}
+.fc .ix b{font-size:.3em;letter-spacing:-.06em}
+.fc .ix i{font-size:.26em;font-style:normal;line-height:.9}
+.fc .big{position:absolute;right:.07em;bottom:.01em;font-size:.6em;line-height:1;letter-spacing:-.06em}
 .slot .ph{font-size:16px;color:var(--ink-3);font-weight:500}
 .grp{display:flex;flex-direction:column;gap:7px}
 .grphd{display:flex;align-items:center;gap:8px}
@@ -130,12 +141,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .lbl{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
 .slots{display:flex;flex-wrap:wrap;gap:12px}
 .picker{container-type:inline-size;display:grid;grid-template-columns:repeat(13,1fr);gap:2px}
-.pc{aspect-ratio:3/4;border-radius:4px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.05;font-size:clamp(8px,calc((100cqw - 24px)/13*.55),26px)}
-.pc .r{font-weight:700;letter-spacing:-.02em}
+/* 13 cards and 12 gaps of 2px a row; font-size is the card's height (4/3 its width) */
+.pc{aspect-ratio:3/4;border-radius:4px;font-size:calc((100cqw - 24px)/13*4/3)}
 .pc.used{opacity:.22}
-.pc:hover{background:var(--surface-3);border-color:var(--line-2)}
+.pc:hover{filter:brightness(1.15)}
 .pc.used:hover{opacity:.5}
-.pc.cur{opacity:1;border-color:var(--hero);box-shadow:0 0 0 2px var(--hero-soft)}
+.pc.cur{opacity:1;box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--hero)}
 .dlg{width:min(640px,calc(100vw - 32px));max-width:none;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
 .dlg::backdrop{background:rgba(14,22,32,.38)}
 .dlghd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
