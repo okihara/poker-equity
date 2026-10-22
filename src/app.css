@@ -267,7 +267,9 @@ th:first-child,td:first-child{text-align:left}
 #mhtbl th{position:sticky;top:0;background:var(--surface)}
 #mhtbl td:first-child{font-family:var(--ff-ui)}
 #mhtbl th:nth-child(2){text-align:left}
-#mhtbl td:nth-child(2){text-align:left;white-space:normal;min-width:180px}
+#mhtbl td:nth-child(2){text-align:left;white-space:normal}
+/* a phone has no room for a minimum: the hands wrap so combos and the total stay in view */
+@media(min-width:600px){#mhtbl td:nth-child(2){min-width:180px}}
 #mhtbl tr.me td{background:var(--hero-soft);color:var(--hero);font-weight:600}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
