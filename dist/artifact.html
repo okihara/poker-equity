@@ -302,6 +302,19 @@ th:first-child,td:first-child{text-align:left}
 .warn{color:var(--pole-lo);font-size:12px}
 .rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .rhead>h2{margin-bottom:0}
+/* equity buckets: the player's colour from faint (weakest band) to full */
+.rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
+.bk{margin-bottom:8px}
+.bkbar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--surface-3);gap:1px}
+.bkbar>i{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;white-space:nowrap;font-style:normal;
+  font-family:var(--ff-num);font-size:10.5px;font-weight:600;transition:width .25s ease}
+.bk .b0{background:color-mix(in oklab,var(--side) 22%,var(--surface-3));color:var(--ink)}
+.bk .b1{background:color-mix(in oklab,var(--side) 48%,var(--surface-3));color:var(--ink)}
+.bk .b2{background:color-mix(in oklab,var(--side) 74%,var(--surface-3));color:#fff}
+.bk .b3{background:var(--side);color:#fff}
+.bkkey{display:flex;gap:10px;margin-top:4px;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3);flex-wrap:wrap}
+.bkkey span{display:flex;align-items:center;gap:4px}
+.bkkey i{width:8px;height:8px;border-radius:2px;display:block}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
 .rpanel[data-k="2"] .rtitle{color:var(--opp2)}
@@ -383,6 +396,8 @@ th:first-child,td:first-child{text-align:left}
       <!-- the combo count sits by the title, not in the button row below, so a
            wrapping row cannot push it onto a line of its own in one panel only -->
       <div class="rhead"><h2 class="rtitle">相手のレンジ</h2><span class="chip rangeInfo">–</span></div>
+      <!-- equity buckets: the share of this range in each band of its own equity; app.js fills it -->
+      <div class="bk"><div class="bkbar"></div><div class="bkkey"></div></div>
       <div class="reditor">
         <div class="ctl">
           <div class="ctl-block">
@@ -485,6 +500,7 @@ th:first-child,td:first-child{text-align:left}
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>各レンジの上のバーはエクイティバケツです。そのレンジのコンボを、そのプレイヤー自身のエクイティで4つの帯（25%・50%・75%区切り。3人モードは均等割りの 33.3% を中心に 17%・33%・67%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
   </div>
@@ -1000,7 +1016,7 @@ function buildPanels(){
   for(const el of [h,v,v2]){
     const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=['ヒーロー','相手','相手2'][k];
     const P={k,el,w:ranges[k],eq:Array.from({length:13},()=>new Float64Array(13).fill(-1)),paintW:1,
-      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle')};
+      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle'),bk:q('bk')};
     P.title.id='h-range'+k;el.setAttribute('aria-labelledby',P.title.id);
     P.grid.setAttribute('aria-label',nm+'のレンジグリッド');P.text.setAttribute('aria-label',nm+'のレンジのテキスト表記');
     P.slider.setAttribute('aria-label',nm+'のレンジを上位何パーセントで選ぶか');
@@ -1270,7 +1286,22 @@ function showResult(r){
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
+/* Equity buckets: how much of each range sits in each band of its own player's
+   equity. Bands break at the legend's ticks, so 3-player mode centres on the
+   1/3 fair share as the colours do. Combos count by share, so blockers weigh in. */
+const bkCut=()=>mode==='multi'?[1/6,1/3,2/3]:[0.25,0.5,0.75];
+function drawBuckets(r){
+  const cut=bkCut(),nm=mode==='multi'?['〜17%','17〜33%','33〜67%','67%〜']:['〜25%','25〜50%','50〜75%','75%〜'];
+  for(const P of RP){
+    /* a lone hand has nothing to bucket; the second villain plays only three ways */
+    P.bk.hidden=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;if(P.bk.hidden)continue;
+    const b=[0,0,0,0],pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
+    for(const pc of pcs){let i=0;while(i<3&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
+    P.bk.firstChild.innerHTML=r?b.map((x,i)=>'<i class="b'+i+'" style="width:'+(x*100)+'%" title="エクイティ '+nm[i]+': レンジの '+(x*100).toFixed(1)+'%">'+(x>=0.08?Math.round(x*100)+'%':'')+'</i>').join(''):'';
+    P.bk.lastChild.innerHTML=nm.map((n,i)=>'<span><i class="b'+i+'"></i>'+n+'</span>').join('');}
+}
 function clearHeat(){
+  drawBuckets(null);
   for(const el of hmEl.querySelectorAll('.hc')){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.title='';el.removeAttribute('data-tip');}
   $('tbl').querySelector('tbody').innerHTML='';
   for(const P of RP){for(const r of P.eq)r.fill(-1);repaintGrid(P);}
@@ -1289,6 +1320,7 @@ function aggregate(r,k){
 }
 /* Colours both range grids, and the heatmap for the range hmSide picks. */
 function drawHeat(r){
+  drawBuckets(r);
   for(const P of RP){if(mode==='hand'&&!P.k)continue;
     const agg=aggregate(r,P.k);
     for(let i=0;i<13;i++)for(let j=0;j<13;j++){const a=agg[i][j];P.eq[i][j]=a.m>0?a.s/a.m:-1;}

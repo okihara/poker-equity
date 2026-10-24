@@ -296,6 +296,19 @@ th:first-child,td:first-child{text-align:left}
 .warn{color:var(--pole-lo);font-size:12px}
 .rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .rhead>h2{margin-bottom:0}
+/* equity buckets: the player's colour from faint (weakest band) to full */
+.rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
+.bk{margin-bottom:8px}
+.bkbar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--surface-3);gap:1px}
+.bkbar>i{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;white-space:nowrap;font-style:normal;
+  font-family:var(--ff-num);font-size:10.5px;font-weight:600;transition:width .25s ease}
+.bk .b0{background:color-mix(in oklab,var(--side) 22%,var(--surface-3));color:var(--ink)}
+.bk .b1{background:color-mix(in oklab,var(--side) 48%,var(--surface-3));color:var(--ink)}
+.bk .b2{background:color-mix(in oklab,var(--side) 74%,var(--surface-3));color:#fff}
+.bk .b3{background:var(--side);color:#fff}
+.bkkey{display:flex;gap:10px;margin-top:4px;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3);flex-wrap:wrap}
+.bkkey span{display:flex;align-items:center;gap:4px}
+.bkkey i{width:8px;height:8px;border-radius:2px;display:block}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
 .rpanel[data-k="2"] .rtitle{color:var(--opp2)}
