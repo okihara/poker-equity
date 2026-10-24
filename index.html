@@ -330,6 +330,29 @@ th:first-child,td:first-child{text-align:left}
 .chartkey b{font-family:var(--ff-num);font-weight:600}
 .tip.multi{white-space:pre}
 
+/* flop set: one stacked bar per flop, scrolling sideways; filters beside it on wide screens */
+.fswrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:6px}
+@media(min-width:960px){.fswrap{grid-template-columns:minmax(0,1fr) 330px}}
+.fschart{--fsh:300px;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start}
+.fsy{position:relative;height:var(--fsh);font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3)}
+.fsy span{position:absolute;right:5px;transform:translateY(50%)}
+.fsscroll{overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+.fsbars{display:flex;gap:2px;width:max-content;min-height:calc(var(--fsh) + 40px)}
+.fsbars.stale{opacity:.4}
+.fsb{width:16px;cursor:pointer}
+.fsst{height:var(--fsh);display:flex;flex-direction:column-reverse;background:var(--surface-3);border-radius:2px;overflow:hidden}
+.fsst i{display:block;flex:none}
+.fsb:hover .fsst{box-shadow:0 0 0 2px var(--ink)}
+.fsst .c0{background:var(--hero)}.fsst .c1{background:var(--opp)}.fsst .c2{background:var(--opp2)}
+.fsl{display:flex;flex-direction:column;align-items:center;margin-top:3px;font-family:var(--ff-num);font-size:10px;font-weight:600;line-height:1.2}
+.fsl .s0{color:var(--club)}.fsl .s1{color:var(--diamond)}.fsl .s2{color:var(--heart)}.fsl .s3{color:var(--spade)}
+.fsgrid{position:absolute;left:28px;right:0;top:0;height:var(--fsh);pointer-events:none;opacity:.55;
+  background:linear-gradient(var(--bg),var(--bg)) 0 25%/100% 1px no-repeat,linear-gradient(var(--bg),var(--bg)) 0 50%/100% 1px no-repeat,linear-gradient(var(--bg),var(--bg)) 0 75%/100% 1px no-repeat}
+.fsfilt{display:flex;flex-direction:column;gap:9px}
+.fsfilt .segbtns{flex-wrap:wrap;width:max-content;max-width:100%}
+.fsfilt .segbtns button{padding:5px 8px}
+#fsMsg{color:var(--ink-3)}
+
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
 .bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em 3.2em;gap:3px 8px;align-items:center;
@@ -481,6 +504,26 @@ th:first-child,td:first-child{text-align:left}
     </div>
   </section>
 
+  <!-- Every flop up to suits, one stacked bar of the players' equities each; computed
+       on request on a Worker of its own, then filtered here. app.js fills it. -->
+  <section class="panel" id="fsPanel" aria-labelledby="h-fs">
+    <div class="hmtitle">
+      <h2 id="h-fs" class="seclabel">フロップ集合分析</h2>
+      <button class="tbtn" id="fsRun" type="button">全フロップを計算</button>
+      <span class="note" id="fsMsg" style="margin:0"></span>
+    </div>
+    <div class="chartkey" id="fsKey"></div>
+    <div class="prog" id="fsProg"><i id="fsProgi"></i></div>
+    <div class="fswrap">
+      <div class="fschart">
+        <div class="fsy"><span style="bottom:100%">100</span><span style="bottom:75%">75</span><span style="bottom:50%">50</span><span style="bottom:25%">25</span><span style="bottom:0">0</span></div>
+        <div class="fsscroll" id="fsScroll"><div class="fsbars" id="fsBars"></div></div>
+        <i class="fsgrid" aria-hidden="true"></i>
+      </div>
+      <div class="fsfilt" id="fsFilt"></div>
+    </div>
+  </section>
+
   <!-- Only with a flop, turn or river on the board; app.js fills it on every run. -->
   <section class="panel" id="mhPanel" hidden>
     <details class="mhdet" id="mhdet">
@@ -558,6 +601,8 @@ th:first-child,td:first-child{text-align:left}
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>フロップ集合分析は、スートの入れ替えで同じになるものをまとめた全 1,755 種のフロップについて、各プレイヤーのエクイティを積み上げの縦棒で並べます（下からヒーロー・相手・相手2）。ボードの指定とは関係なく全フロップを計算し、右のフィルターで絞り込めます。棒をクリックするとそのフロップがボードに入ります。</li>
+      <li>フロップ集合分析はレンジ vs レンジと3人モードで使えます。各フロップを数千回のモンテカルロで計算するので、1本ごとに ±1% 程度の誤差があります。見出し横の平均は、絞り込んだフロップを出現回数で重み付けした平均です。</li>
       <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
       <li>各レンジの上の棒はバケツです。「エクイティ」は、そのレンジのコンボをそのプレイヤー自身のエクイティで7つの帯（20・35・45・55・65・80%区切り。3人モードは均等割りの 33.3% を真ん中の帯に入れて 10・20・30・40・50・70%区切り）に分けたもの。強い帯が上で、レンジの何%が各帯にあるかを示します。</li>
       <li>ボードが3枚以上あると、その下に「役」と「ドロー」のバケツも並びます。役はボードに対しての強さ（ボードのペアは自分のペアに数えない）、ドローはコンボドロー → ナッツフラッシュドロー → フラッシュドロー → 両面 → ガットショット → バックドア の順に優先して1つに数えます（ナッツフラッシュドローは、そのスートでボードにない最も高いカードを持っているもの）。バックドアはフロップだけで、リバーではドローの段は出ません。右の EQ はその分類の平均エクイティです。</li>
@@ -820,37 +865,50 @@ async function computeRangeEquity(rawA,rawB,board,dead,opts){
    until no two share a card -- exactly the product of the weights conditioned
    on disjoint hands, the joint the heads-up engine sums -- then the rest of
    the board. Each player takes a share of the pot per trial: 1 alone at the
-   top, 1/k in a k-way split. Returns {players:[{equity,win,tie,lose,perCombo,
-   nCombos}],se:[...],mode:'mc',nTrials}; perCombo as computeRangeEquity's. */
-async function computeMultiEquity(raws,board,dead,opts){
-  opts=opts||{};dead=dead||[];
+   top, 1/k in a k-way split. mcPrep sets a deal up once per board; mcTrial
+   runs one. */
+function mcPrep(raws,board,dead){
   const L=board.length;
   if(L!==0&&(L<3||L>5))return{error:'ボードは0枚か3〜5枚にしてください。'};
   const used=new Uint8Array(52);for(const c of board)used[c]=1;for(const c of dead)used[c]=1;
   const R=raws.map(r=>rvrPrep(r,used)),P=R.length,e=R.findIndex(r=>!r.n);
-  if(e>=0)return{error:'プレイヤー'+(e+1)+'のレンジのコンボがすべてブロックされています。'};
+  if(e>=0)return{error:'プレイヤー'+(e+1)+'のレンジのコンボがすべてブロックされています。',blocked:e};
   const cum=R.map(r=>{const c=new Float64Array(r.n);let s=0;for(let i=0;i<r.n;i++){s+=r.w[i];c[i]=s;}return c;});
-  const draw=(c,u)=>{const x=u*c[c.length-1];let lo=0,hi=c.length-1;while(lo<hi){const m=(lo+hi)>>1;if(c[m]>x)hi=m;else lo=m+1;}return lo;};
   const deck=[];for(let c=0;c<52;c++)if(!used[c])deck.push(c);
-  const D=deck.length,k=5-L,N=Math.max(1000,opts.trials||1000000),rng=makeRng(opts.seed||0x2545f491);
+  const b=new Int32Array(5);for(let i=0;i<L;i++)b[i]=board[i];
+  /* a card is taken in this attempt when stamp[c]===st, so nothing needs clearing */
+  return{R,P,cum,deck,L,b,pick:new Int32Array(P),v:new Int32Array(P),stamp:new Int32Array(52),st:0,best:-1};
+}
+/* One trial on X: the combos dealt go in X.pick, each player's strength in X.v
+   and the winning strength in X.best. Returns how many split the pot, or 0
+   when no disjoint deal turned up in 20000 attempts. */
+function mcTrial(X,rng){
+  const{R,P,cum,deck,L,b,pick,v,stamp}=X,D=deck.length;let st=X.st;
+  for(let tries=0;;){st++;let ok=true;
+    for(let p=0;p<P;p++){const r=R[p],c=cum[p],u=rng()*c[c.length-1];let lo=0,hi=c.length-1;
+      while(lo<hi){const m=(lo+hi)>>1;if(c[m]>u)hi=m;else lo=m+1;}
+      const x=r.c0[lo],y=r.c1[lo];if(stamp[x]===st||stamp[y]===st){ok=false;break;}stamp[x]=st;stamp[y]=st;pick[p]=lo;}
+    if(ok)break;if(++tries>20000){X.st=st;return 0;}}
+  for(let s=L;s<5;s++){let c;do c=deck[(rng()*D)|0];while(stamp[c]===st);stamp[c]=st;b[s]=c;}
+  X.st=st;let best=-1,nb=0;
+  for(let p=0;p<P;p++){const r=R[p],i=pick[p],x=eval7(r.c0[i],r.c1[i],b[0],b[1],b[2],b[3],b[4]);v[p]=x;
+    if(x>best){best=x;nb=1;}else if(x===best)nb++;}
+  X.best=best;return nb;
+}
+const NO_DEAL='レンジどうしでカードが重ならない組み合わせがありません。';
+/* Returns {players:[{equity,win,tie,lose,perCombo,nCombos}],se:[...],
+   mode:'mc',nTrials}; perCombo as computeRangeEquity's. */
+async function computeMultiEquity(raws,board,dead,opts){
+  opts=opts||{};
+  const X=mcPrep(raws,board,dead||[]);if(X.error)return{error:X.error};
+  const{R,P,pick,v}=X,N=Math.max(1000,opts.trials||1000000),rng=makeRng(opts.seed||0x2545f491);
   /* per combo: pot share won and trials dealt; per player: totals and squares for the error */
   const sh=R.map(r=>new Float64Array(r.n)),ct=R.map(r=>new Float64Array(r.n));
   const win=new Float64Array(P),tie=new Float64Array(P),eq=new Float64Array(P),sq=new Float64Array(P);
-  const pick=new Int32Array(P),v=new Int32Array(P),b=new Int32Array(5),stamp=new Int32Array(52);
-  for(let i=0;i<L;i++)b[i]=board[i];
-  /* a card is taken in this attempt when stamp[c]===st, so nothing needs clearing */
-  let st=0,tries=0,t0=Date.now();
+  let t0=Date.now();
   for(let t=0;t<N;t++){
-    for(;;){st++;let ok=true;
-      for(let p=0;p<P;p++){const r=R[p],i=draw(cum[p],rng()),x=r.c0[i],y=r.c1[i];
-        if(stamp[x]===st||stamp[y]===st){ok=false;break;}stamp[x]=st;stamp[y]=st;pick[p]=i;}
-      if(ok)break;
-      if(++tries>20000&&t===0)return{error:'レンジどうしでカードが重ならない組み合わせがありません。'};}
-    for(let s=0;s<k;s++){let c;do c=deck[(rng()*D)|0];while(stamp[c]===st);stamp[c]=st;b[L+s]=c;}
-    let best=-1,nb=0;
-    for(let p=0;p<P;p++){const r=R[p],i=pick[p],x=eval7(r.c0[i],r.c1[i],b[0],b[1],b[2],b[3],b[4]);v[p]=x;
-      if(x>best){best=x;nb=1;}else if(x===best)nb++;}
-    for(let p=0;p<P;p++){const i=pick[p];ct[p][i]++;if(v[p]!==best)continue;
+    const nb=mcTrial(X,rng);if(!nb)return{error:NO_DEAL};
+    for(let p=0;p<P;p++){const i=pick[p];ct[p][i]++;if(v[p]!==X.best)continue;
       const s=1/nb;eq[p]+=s;sq[p]+=s*s;sh[p][i]+=s;if(nb===1)win[p]++;else tie[p]++;}
     if((t&1023)===1023&&Date.now()-t0>30&&t+1<N){
       if(opts.onProgress)opts.onProgress((t+1)/N,Array.from(eq,x=>x/(t+1)));
@@ -861,6 +919,61 @@ async function computeMultiEquity(raws,board,dead,opts){
     return{equity:eq[p]/N,win:win[p]/N,tie:tie[p]/N,lose:1-(win[p]+tie[p])/N,perCombo:pc,nCombos:r.n};});
   const se=players.map((x,p)=>Math.sqrt(Math.max(0,sq[p]/N-x.equity*x.equity)/(N-1)));
   return{players,se,mode:'mc',nTrials:N};
+}
+/* ================= flop set ================= */
+/* Every flop up to swapping suits: 1755 classes of the 22100 flops, each with
+   its count n and a representative c (cards high to low, suits numbered in
+   order of first use, so the representative is the same whichever member
+   named it). Ranges built from the 13x13 grid treat suits alike, so one flop
+   per class stands for them all. Sorted by high, middle, low rank, then suits. */
+let FLOPS=null;
+function flopClasses(){
+  if(FLOPS)return FLOPS;
+  const m=new Map();
+  for(let a=0;a<52;a++)for(let b=a+1;b<52;b++)for(let c=b+1;c<52;c++){
+    const cs=[a,b,c].sort((x,y)=>(y>>2)-(x>>2)||(x&3)-(y&3)),map=[-1,-1,-1,-1];let ns=0;
+    /* within a rank the suit order is free, so try each order of equal ranks and keep the smallest naming */
+    let best=null;
+    for(const o of [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]){
+      const q=o.map(i=>cs[i]);if(q[0]>>2<q[1]>>2||q[1]>>2<q[2]>>2)continue;
+      map.fill(-1);ns=0;const r=q.map(x=>{const s=x&3;if(map[s]<0)map[s]=ns++;return(x&~3)|map[s];});
+      const k=r[0]*2704+r[1]*52+r[2];if(!best||k<best.k)best={k,r};}
+    const e=m.get(best.k);if(e)e.n++;else m.set(best.k,{c:best.r,n:1});}
+  FLOPS=[...m.values()].sort((x,y)=>(x.c[0]>>2)-(y.c[0]>>2)||(x.c[1]>>2)-(y.c[1]>>2)||(x.c[2]>>2)-(y.c[2]>>2)||
+    (x.c[0]&3)-(y.c[0]&3)||(x.c[1]&3)-(y.c[1]&3)||(x.c[2]&3)-(y.c[2]&3));
+  return FLOPS;
+}
+/* A flop's texture for the filters: suits 0 rainbow, 1 two-tone, 2 monotone;
+   pair 0 none, 1 paired, 2 trips; conn 2 when a straight is possible, 1 when
+   only an open-ender is (two ranks within a span of four), else 0. */
+function flopTexture(c){
+  const su=new Set(c.map(x=>x&3)).size,rk=[...new Set(c.map(x=>x>>2))];
+  /* ranks with the ace also low, as 0..13 */
+  const lo=rk.flatMap(r=>r===12?[13,0]:[r+1]);
+  let conn=0;
+  if(rk.length===3)for(let w=0;w<=9;w++)if(rk.every(r=>(r===12?[13,0]:[r+1]).some(x=>x>=w&&x<w+5))){conn=2;break;}
+  if(!conn)for(const x of lo)for(const y of lo)if(x<y&&y-x<=3)conn=1;
+  return{suits:3-su,pair:3-rk.length,conn,hi:c[0]>>2,mid:c[1]>>2,lo:c[2]>>2};
+}
+/* Each player's equity on every flop class, sampled with opts.trials deals
+   per flop (default 6000). Returns {flops:[{c,n,eq:[...]|null}],trials}; eq is
+   null where a range has no combo left on that flop. */
+async function computeFlopSet(raws,opts){
+  opts=opts||{};
+  const F=flopClasses(),N=Math.max(100,opts.trials||6000),rng=makeRng(opts.seed||0x5be0cd19),out=[];
+  let t0=Date.now();
+  for(let f=0;f<F.length;f++){
+    const X=mcPrep(raws,F[f].c,[]);let eq=null;
+    if(!X.error){const s=new Float64Array(X.P);
+      for(let t=0;t<N;t++){const nb=mcTrial(X,rng);if(!nb){eq=null;break;}
+        for(let p=0;p<X.P;p++)if(X.v[p]===X.best)s[p]+=1/nb;eq=s;}
+      if(eq)eq=Array.from(s,x=>x/N);}
+    out.push({c:F[f].c,n:F[f].n,eq});
+    if(Date.now()-t0>30&&f+1<F.length){
+      if(opts.onProgress)opts.onProgress((f+1)/F.length);
+      await sleep();if(opts.isStale&&opts.isStale())return{stale:true};t0=Date.now();}
+  }
+  return{flops:out,trials:N};
 }
 /* ================= made hands ================= */
 /* Strength of the best hand in 5..7 cards. eval7 only ORs cards into suit
@@ -930,7 +1043,7 @@ function handLabel(v){const t=Math.floor(v/CAT),r=v%CAT,nb=k=>RANKS[(r>>(4*k))&1
 /* ================= worker ================= */
 /* The page starts a Worker from this same engine script. Inside it, answer
    {id,a,b,board,dead,opts} (or {id,multi:[range,...],...}
-   for three or more players) with {id,progress,partial} while running and
+   for three or more players, or {id,flopset:[range,...],opts} for every flop) with {id,progress,partial} while running and
    {id,result} at the end. A newer id makes the running query stale; it sees
    that at its next yield and stops without posting a result. */
 if(typeof WorkerGlobalScope!=='undefined'&&self instanceof WorkerGlobalScope){
@@ -939,7 +1052,7 @@ if(typeof WorkerGlobalScope!=='undefined'&&self instanceof WorkerGlobalScope){
     const o=Object.assign({},q.opts,{
       onProgress:(p,eq)=>self.postMessage({id:q.id,progress:p,partial:eq}),
       isStale:()=>q.id!==latest});
-    const r=await(q.multi?computeMultiEquity(q.multi,q.board,q.dead,o):computeRangeEquity(q.a,q.b,q.board,q.dead,o));
+    const r=await(q.flopset?computeFlopSet(q.flopset,o):q.multi?computeMultiEquity(q.multi,q.board,q.dead,o):computeRangeEquity(q.a,q.b,q.board,q.dead,o));
     if(!r.stale)self.postMessage({id:q.id,result:r});};
   setTimeout(pfInit,0); // expand the preflop table before the first question
 }
@@ -1312,7 +1425,7 @@ function rawRange(w){const raw=[];
   return raw;}
 async function run(){
   const my=++token;
-  drawMade();
+  drawMade();fsState();
   const H=live(hero),nb=live(board).length;
   if(mode==='hand'&&H.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
   if(nb===1||nb===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
@@ -1518,6 +1631,67 @@ function drawLegend(){
   [...$('legticks').children].forEach((x,i)=>x.textContent=t[i]);
 }
 
+/* ---- flop set: every flop class's equities, on a Worker of its own so the
+   main result keeps coming while it runs; then filtered and drawn here ---- */
+const FSF=[['suits','スーツ',['レインボー','ツートーン','モノトーン']],['pair','ペア',['ペアなし','ペアあり','トリプル']],
+  ['conn','コネクト',['非コネクト','OESDあり','コネクト']],
+  ...[['hi','最も高いカード'],['mid','中間のカード'],['lo','最も低いカード']].map(([k,t])=>[k,t,[...RANKS].reverse(),[...RANKS].map((x,i)=>12-i)])];
+const fsSel={suits:-1,pair:-1,conn:-1,hi:-1,mid:-1,lo:-1};
+let fsRes=null,fsSig='',fsW=null,fsId=0;
+/* what the result depends on: the mode and the ranges in play */
+const fsSigNow=()=>mode+'|'+(mode==='multi'?ranges:ranges.slice(0,2)).map(rangeText).join('|');
+function buildFsFilters(){
+  $('fsFilt').innerHTML=FSF.map(([k,t,labels,vals])=>'<div><div class="lbl">'+t+'</div><div class="segbtns" data-f="'+k+'" role="group" aria-label="'+t+'">'+
+    '<button data-v="-1" aria-pressed="true">すべて</button>'+labels.map((l,i)=>'<button data-v="'+(vals?vals[i]:i)+'" aria-pressed="false">'+l+'</button>').join('')+'</div></div>').join('');
+  $('fsFilt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=b.parentNode;
+    fsSel[g.dataset.f]=+b.dataset.v;pressed(g,b);drawFlopSet();});
+}
+function fsState(){
+  const ok=mode!=='hand';$('fsRun').disabled=!ok;
+  $('fsMsg').textContent=!ok?'レンジ vs レンジと3人モードで使えます。':fsRes&&fsSig!==fsSigNow()?'レンジが変わりました。もう一度計算してください。':'';
+  $('fsBars').classList.toggle('stale',!!fsRes&&fsSig!==fsSigNow());
+}
+function runFlopSet(){
+  if(mode==='hand')return;
+  const id=++fsId,sig=fsSigNow(),rs=(mode==='multi'?ranges:ranges.slice(0,2)).map(rawRange),e=rs.findIndex(r=>!r.length);
+  if(e>=0){$('fsMsg').textContent=(mode==='multi'?PN[e]:['ヒーロー','相手'][e])+'のレンジを選んでください。';return;}
+  $('fsProg').classList.add('on');$('fsProgi').style.width='0%';$('fsRun').textContent='計算中…';
+  const done=r=>{if(id!==fsId||r.stale)return;$('fsProg').classList.remove('on');$('fsRun').textContent='全フロップを計算';
+    r.names=mode==='multi'?PN:['ヒーロー','相手'];fsRes=r;fsSig=sig;fsState();drawFlopSet();};
+  const prog=p=>{if(id===fsId)$('fsProgi').style.width=(p*100).toFixed(0)+'%';};
+  if(!fsW)try{fsW=new Worker(URL.createObjectURL(new Blob([$('engine').textContent],{type:'text/javascript'})));
+    fsW.onmessage=e=>{const m=e.data;if(m.id!==fsId)return;if(m.result)done(m.result);else prog(m.progress);};
+    fsW.onerror=()=>{fsW=null;};}catch(err){fsW=null;}
+  if(fsW)fsW.postMessage({id,flopset:rs,opts:{}});
+  else computeFlopSet(rs,{onProgress:prog,isStale:()=>id!==fsId}).then(done);
+}
+/* the filtered flops as bars, players stacked from the bottom; labels are the
+   ranks high to low in their suit's colour */
+function drawFlopSet(){
+  const bars=$('fsBars');
+  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';return;}
+  const names=fsRes.names,P=names.length;
+  const L=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
+  bars.innerHTML=L.map(f=>'<div class="fsb" data-i="'+fsRes.flops.indexOf(f)+'"><div class="fsst">'+
+    (f.eq?f.eq.map((x,k)=>'<i class="c'+k+'" style="height:'+(x*100).toFixed(2)+'%"></i>').join(''):'')+'</div>'+
+    '<div class="fsl">'+f.c.map(c=>'<b class="s'+(c&3)+'">'+RANKS[c>>2]+'</b>').join('')+'</div></div>').join('');
+  /* weighted by how many raw flops each class stands for */
+  const s=new Float64Array(P);let n=0;
+  for(const f of L)if(f.eq){n+=f.n;for(let k=0;k<P;k++)s[k]+=f.eq[k]*f.n;}
+  $('fsKey').innerHTML=(n?[...s].map((x,k)=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(x/n*100).toFixed(1)+'%</b></span>').join(''):'')+
+    '<span>'+L.length.toLocaleString()+' 種（'+n.toLocaleString()+' 通り）のフロップ</span>';
+}
+$('fsRun').addEventListener('click',runFlopSet);
+$('fsBars').addEventListener('click',e=>{const b=e.target.closest('.fsb');if(!b)return;
+  board=fsRes.flops[+b.dataset.i].c.slice();render();schedule();window.scrollTo({top:0,behavior:'smooth'});});
+$('fsBars').addEventListener('pointerover',e=>{const b=e.target.closest('.fsb');if(!b){tip.classList.remove('on');return;}
+  const f=fsRes.flops[+b.dataset.i],names=fsRes.names;
+  tip.textContent=f.c.map(c=>RANKS[c>>2]+SYM[c&3]).join('')+'  '+f.n+'通り\n'+(f.eq?f.eq.map((x,k)=>names[k]+'  '+(x*100).toFixed(1)+'%').join('\n'):'レンジが空になるフロップ')+'\nクリックでボードに入れる';
+  tip.classList.add('on','multi');});
+$('fsBars').addEventListener('pointermove',e=>{if(!tip.classList.contains('on'))return;
+  tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12)+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
+$('fsBars').addEventListener('pointerleave',()=>tip.classList.remove('on','multi'));
+
 /* ---- persistence ---- */
 function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
@@ -1605,7 +1779,7 @@ function setMode(m){
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.map(c=>u.has(c)?null:c);}
   lastRes=null;clearResult('');drawLegend();
   for(const P of RP){repaintAll(P);syncText(P);}
-  setHmSide(hmSide);render();
+  setHmSide(hmSide);render();fsState();drawFlopSet();
 }
 
 /* ---- controls ---- */
@@ -1627,7 +1801,7 @@ new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRec
 stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 /* ---- boot ---- */
-applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();
+applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();buildFsFilters();startWorker();
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
   selectTopPct(RP[1],15);

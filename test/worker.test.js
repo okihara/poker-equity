@@ -50,3 +50,12 @@ test('a query with three ranges goes to the multiway engine', async () => {
   const results = posted.filter((m) => m.result);
   assert.deepStrictEqual(results[0].result.players.map((p) => p.equity), [1, 0, 0]);
 });
+
+test('a flop-set query goes to the flop-set engine', async () => {
+  const { self, posted } = fakeWorker();
+  const aa = [[...parseCards('AsAh'), 1], [...parseCards('AsAd'), 1], [...parseCards('AsAc'), 1],
+    [...parseCards('AhAd'), 1], [...parseCards('AhAc'), 1], [...parseCards('AdAc'), 1]];
+  await self.onmessage({ data: { id: 4, flopset: [aa, all], opts: { trials: 100 } } });
+  const res = posted.filter((m) => m.result)[0].result;
+  assert.strictEqual(res.flops.length, 1755);
+});

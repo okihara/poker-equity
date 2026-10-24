@@ -315,6 +315,29 @@ th:first-child,td:first-child{text-align:left}
 .chartkey b{font-family:var(--ff-num);font-weight:600}
 .tip.multi{white-space:pre}
 
+/* flop set: one stacked bar per flop, scrolling sideways; filters beside it on wide screens */
+.fswrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-top:6px}
+@media(min-width:960px){.fswrap{grid-template-columns:minmax(0,1fr) 330px}}
+.fschart{--fsh:300px;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:start}
+.fsy{position:relative;height:var(--fsh);font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3)}
+.fsy span{position:absolute;right:5px;transform:translateY(50%)}
+.fsscroll{overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+.fsbars{display:flex;gap:2px;width:max-content;min-height:calc(var(--fsh) + 40px)}
+.fsbars.stale{opacity:.4}
+.fsb{width:16px;cursor:pointer}
+.fsst{height:var(--fsh);display:flex;flex-direction:column-reverse;background:var(--surface-3);border-radius:2px;overflow:hidden}
+.fsst i{display:block;flex:none}
+.fsb:hover .fsst{box-shadow:0 0 0 2px var(--ink)}
+.fsst .c0{background:var(--hero)}.fsst .c1{background:var(--opp)}.fsst .c2{background:var(--opp2)}
+.fsl{display:flex;flex-direction:column;align-items:center;margin-top:3px;font-family:var(--ff-num);font-size:10px;font-weight:600;line-height:1.2}
+.fsl .s0{color:var(--club)}.fsl .s1{color:var(--diamond)}.fsl .s2{color:var(--heart)}.fsl .s3{color:var(--spade)}
+.fsgrid{position:absolute;left:28px;right:0;top:0;height:var(--fsh);pointer-events:none;opacity:.55;
+  background:linear-gradient(var(--bg),var(--bg)) 0 25%/100% 1px no-repeat,linear-gradient(var(--bg),var(--bg)) 0 50%/100% 1px no-repeat,linear-gradient(var(--bg),var(--bg)) 0 75%/100% 1px no-repeat}
+.fsfilt{display:flex;flex-direction:column;gap:9px}
+.fsfilt .segbtns{flex-wrap:wrap;width:max-content;max-width:100%}
+.fsfilt .segbtns button{padding:5px 8px}
+#fsMsg{color:var(--ink-3)}
+
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
 .bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em 3.2em;gap:3px 8px;align-items:center;

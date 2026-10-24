@@ -362,7 +362,7 @@ function rawRange(w){const raw=[];
   return raw;}
 async function run(){
   const my=++token;
-  drawMade();
+  drawMade();fsState();
   const H=live(hero),nb=live(board).length;
   if(mode==='hand'&&H.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
   if(nb===1||nb===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
@@ -568,6 +568,67 @@ function drawLegend(){
   [...$('legticks').children].forEach((x,i)=>x.textContent=t[i]);
 }
 
+/* ---- flop set: every flop class's equities, on a Worker of its own so the
+   main result keeps coming while it runs; then filtered and drawn here ---- */
+const FSF=[['suits','スーツ',['レインボー','ツートーン','モノトーン']],['pair','ペア',['ペアなし','ペアあり','トリプル']],
+  ['conn','コネクト',['非コネクト','OESDあり','コネクト']],
+  ...[['hi','最も高いカード'],['mid','中間のカード'],['lo','最も低いカード']].map(([k,t])=>[k,t,[...RANKS].reverse(),[...RANKS].map((x,i)=>12-i)])];
+const fsSel={suits:-1,pair:-1,conn:-1,hi:-1,mid:-1,lo:-1};
+let fsRes=null,fsSig='',fsW=null,fsId=0;
+/* what the result depends on: the mode and the ranges in play */
+const fsSigNow=()=>mode+'|'+(mode==='multi'?ranges:ranges.slice(0,2)).map(rangeText).join('|');
+function buildFsFilters(){
+  $('fsFilt').innerHTML=FSF.map(([k,t,labels,vals])=>'<div><div class="lbl">'+t+'</div><div class="segbtns" data-f="'+k+'" role="group" aria-label="'+t+'">'+
+    '<button data-v="-1" aria-pressed="true">すべて</button>'+labels.map((l,i)=>'<button data-v="'+(vals?vals[i]:i)+'" aria-pressed="false">'+l+'</button>').join('')+'</div></div>').join('');
+  $('fsFilt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=b.parentNode;
+    fsSel[g.dataset.f]=+b.dataset.v;pressed(g,b);drawFlopSet();});
+}
+function fsState(){
+  const ok=mode!=='hand';$('fsRun').disabled=!ok;
+  $('fsMsg').textContent=!ok?'レンジ vs レンジと3人モードで使えます。':fsRes&&fsSig!==fsSigNow()?'レンジが変わりました。もう一度計算してください。':'';
+  $('fsBars').classList.toggle('stale',!!fsRes&&fsSig!==fsSigNow());
+}
+function runFlopSet(){
+  if(mode==='hand')return;
+  const id=++fsId,sig=fsSigNow(),rs=(mode==='multi'?ranges:ranges.slice(0,2)).map(rawRange),e=rs.findIndex(r=>!r.length);
+  if(e>=0){$('fsMsg').textContent=(mode==='multi'?PN[e]:['ヒーロー','相手'][e])+'のレンジを選んでください。';return;}
+  $('fsProg').classList.add('on');$('fsProgi').style.width='0%';$('fsRun').textContent='計算中…';
+  const done=r=>{if(id!==fsId||r.stale)return;$('fsProg').classList.remove('on');$('fsRun').textContent='全フロップを計算';
+    r.names=mode==='multi'?PN:['ヒーロー','相手'];fsRes=r;fsSig=sig;fsState();drawFlopSet();};
+  const prog=p=>{if(id===fsId)$('fsProgi').style.width=(p*100).toFixed(0)+'%';};
+  if(!fsW)try{fsW=new Worker(URL.createObjectURL(new Blob([$('engine').textContent],{type:'text/javascript'})));
+    fsW.onmessage=e=>{const m=e.data;if(m.id!==fsId)return;if(m.result)done(m.result);else prog(m.progress);};
+    fsW.onerror=()=>{fsW=null;};}catch(err){fsW=null;}
+  if(fsW)fsW.postMessage({id,flopset:rs,opts:{}});
+  else computeFlopSet(rs,{onProgress:prog,isStale:()=>id!==fsId}).then(done);
+}
+/* the filtered flops as bars, players stacked from the bottom; labels are the
+   ranks high to low in their suit's colour */
+function drawFlopSet(){
+  const bars=$('fsBars');
+  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';return;}
+  const names=fsRes.names,P=names.length;
+  const L=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
+  bars.innerHTML=L.map(f=>'<div class="fsb" data-i="'+fsRes.flops.indexOf(f)+'"><div class="fsst">'+
+    (f.eq?f.eq.map((x,k)=>'<i class="c'+k+'" style="height:'+(x*100).toFixed(2)+'%"></i>').join(''):'')+'</div>'+
+    '<div class="fsl">'+f.c.map(c=>'<b class="s'+(c&3)+'">'+RANKS[c>>2]+'</b>').join('')+'</div></div>').join('');
+  /* weighted by how many raw flops each class stands for */
+  const s=new Float64Array(P);let n=0;
+  for(const f of L)if(f.eq){n+=f.n;for(let k=0;k<P;k++)s[k]+=f.eq[k]*f.n;}
+  $('fsKey').innerHTML=(n?[...s].map((x,k)=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(x/n*100).toFixed(1)+'%</b></span>').join(''):'')+
+    '<span>'+L.length.toLocaleString()+' 種（'+n.toLocaleString()+' 通り）のフロップ</span>';
+}
+$('fsRun').addEventListener('click',runFlopSet);
+$('fsBars').addEventListener('click',e=>{const b=e.target.closest('.fsb');if(!b)return;
+  board=fsRes.flops[+b.dataset.i].c.slice();render();schedule();window.scrollTo({top:0,behavior:'smooth'});});
+$('fsBars').addEventListener('pointerover',e=>{const b=e.target.closest('.fsb');if(!b){tip.classList.remove('on');return;}
+  const f=fsRes.flops[+b.dataset.i],names=fsRes.names;
+  tip.textContent=f.c.map(c=>RANKS[c>>2]+SYM[c&3]).join('')+'  '+f.n+'通り\n'+(f.eq?f.eq.map((x,k)=>names[k]+'  '+(x*100).toFixed(1)+'%').join('\n'):'レンジが空になるフロップ')+'\nクリックでボードに入れる';
+  tip.classList.add('on','multi');});
+$('fsBars').addEventListener('pointermove',e=>{if(!tip.classList.contains('on'))return;
+  tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12)+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
+$('fsBars').addEventListener('pointerleave',()=>tip.classList.remove('on','multi'));
+
 /* ---- persistence ---- */
 function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
@@ -655,7 +716,7 @@ function setMode(m){
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.map(c=>u.has(c)?null:c);}
   lastRes=null;clearResult('');drawLegend();
   for(const P of RP){repaintAll(P);syncText(P);}
-  setHmSide(hmSide);render();
+  setHmSide(hmSide);render();fsState();drawFlopSet();
 }
 
 /* ---- controls ---- */
@@ -677,7 +738,7 @@ new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRec
 stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 /* ---- boot ---- */
-applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();startWorker();
+applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();buildFsFilters();startWorker();
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
   selectTopPct(RP[1],15);

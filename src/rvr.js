@@ -127,37 +127,50 @@ async function computeRangeEquity(rawA,rawB,board,dead,opts){
    until no two share a card -- exactly the product of the weights conditioned
    on disjoint hands, the joint the heads-up engine sums -- then the rest of
    the board. Each player takes a share of the pot per trial: 1 alone at the
-   top, 1/k in a k-way split. Returns {players:[{equity,win,tie,lose,perCombo,
-   nCombos}],se:[...],mode:'mc',nTrials}; perCombo as computeRangeEquity's. */
-async function computeMultiEquity(raws,board,dead,opts){
-  opts=opts||{};dead=dead||[];
+   top, 1/k in a k-way split. mcPrep sets a deal up once per board; mcTrial
+   runs one. */
+function mcPrep(raws,board,dead){
   const L=board.length;
   if(L!==0&&(L<3||L>5))return{error:'ボードは0枚か3〜5枚にしてください。'};
   const used=new Uint8Array(52);for(const c of board)used[c]=1;for(const c of dead)used[c]=1;
   const R=raws.map(r=>rvrPrep(r,used)),P=R.length,e=R.findIndex(r=>!r.n);
-  if(e>=0)return{error:'プレイヤー'+(e+1)+'のレンジのコンボがすべてブロックされています。'};
+  if(e>=0)return{error:'プレイヤー'+(e+1)+'のレンジのコンボがすべてブロックされています。',blocked:e};
   const cum=R.map(r=>{const c=new Float64Array(r.n);let s=0;for(let i=0;i<r.n;i++){s+=r.w[i];c[i]=s;}return c;});
-  const draw=(c,u)=>{const x=u*c[c.length-1];let lo=0,hi=c.length-1;while(lo<hi){const m=(lo+hi)>>1;if(c[m]>x)hi=m;else lo=m+1;}return lo;};
   const deck=[];for(let c=0;c<52;c++)if(!used[c])deck.push(c);
-  const D=deck.length,k=5-L,N=Math.max(1000,opts.trials||1000000),rng=makeRng(opts.seed||0x2545f491);
+  const b=new Int32Array(5);for(let i=0;i<L;i++)b[i]=board[i];
+  /* a card is taken in this attempt when stamp[c]===st, so nothing needs clearing */
+  return{R,P,cum,deck,L,b,pick:new Int32Array(P),v:new Int32Array(P),stamp:new Int32Array(52),st:0,best:-1};
+}
+/* One trial on X: the combos dealt go in X.pick, each player's strength in X.v
+   and the winning strength in X.best. Returns how many split the pot, or 0
+   when no disjoint deal turned up in 20000 attempts. */
+function mcTrial(X,rng){
+  const{R,P,cum,deck,L,b,pick,v,stamp}=X,D=deck.length;let st=X.st;
+  for(let tries=0;;){st++;let ok=true;
+    for(let p=0;p<P;p++){const r=R[p],c=cum[p],u=rng()*c[c.length-1];let lo=0,hi=c.length-1;
+      while(lo<hi){const m=(lo+hi)>>1;if(c[m]>u)hi=m;else lo=m+1;}
+      const x=r.c0[lo],y=r.c1[lo];if(stamp[x]===st||stamp[y]===st){ok=false;break;}stamp[x]=st;stamp[y]=st;pick[p]=lo;}
+    if(ok)break;if(++tries>20000){X.st=st;return 0;}}
+  for(let s=L;s<5;s++){let c;do c=deck[(rng()*D)|0];while(stamp[c]===st);stamp[c]=st;b[s]=c;}
+  X.st=st;let best=-1,nb=0;
+  for(let p=0;p<P;p++){const r=R[p],i=pick[p],x=eval7(r.c0[i],r.c1[i],b[0],b[1],b[2],b[3],b[4]);v[p]=x;
+    if(x>best){best=x;nb=1;}else if(x===best)nb++;}
+  X.best=best;return nb;
+}
+const NO_DEAL='レンジどうしでカードが重ならない組み合わせがありません。';
+/* Returns {players:[{equity,win,tie,lose,perCombo,nCombos}],se:[...],
+   mode:'mc',nTrials}; perCombo as computeRangeEquity's. */
+async function computeMultiEquity(raws,board,dead,opts){
+  opts=opts||{};
+  const X=mcPrep(raws,board,dead||[]);if(X.error)return{error:X.error};
+  const{R,P,pick,v}=X,N=Math.max(1000,opts.trials||1000000),rng=makeRng(opts.seed||0x2545f491);
   /* per combo: pot share won and trials dealt; per player: totals and squares for the error */
   const sh=R.map(r=>new Float64Array(r.n)),ct=R.map(r=>new Float64Array(r.n));
   const win=new Float64Array(P),tie=new Float64Array(P),eq=new Float64Array(P),sq=new Float64Array(P);
-  const pick=new Int32Array(P),v=new Int32Array(P),b=new Int32Array(5),stamp=new Int32Array(52);
-  for(let i=0;i<L;i++)b[i]=board[i];
-  /* a card is taken in this attempt when stamp[c]===st, so nothing needs clearing */
-  let st=0,tries=0,t0=Date.now();
+  let t0=Date.now();
   for(let t=0;t<N;t++){
-    for(;;){st++;let ok=true;
-      for(let p=0;p<P;p++){const r=R[p],i=draw(cum[p],rng()),x=r.c0[i],y=r.c1[i];
-        if(stamp[x]===st||stamp[y]===st){ok=false;break;}stamp[x]=st;stamp[y]=st;pick[p]=i;}
-      if(ok)break;
-      if(++tries>20000&&t===0)return{error:'レンジどうしでカードが重ならない組み合わせがありません。'};}
-    for(let s=0;s<k;s++){let c;do c=deck[(rng()*D)|0];while(stamp[c]===st);stamp[c]=st;b[L+s]=c;}
-    let best=-1,nb=0;
-    for(let p=0;p<P;p++){const r=R[p],i=pick[p],x=eval7(r.c0[i],r.c1[i],b[0],b[1],b[2],b[3],b[4]);v[p]=x;
-      if(x>best){best=x;nb=1;}else if(x===best)nb++;}
-    for(let p=0;p<P;p++){const i=pick[p];ct[p][i]++;if(v[p]!==best)continue;
+    const nb=mcTrial(X,rng);if(!nb)return{error:NO_DEAL};
+    for(let p=0;p<P;p++){const i=pick[p];ct[p][i]++;if(v[p]!==X.best)continue;
       const s=1/nb;eq[p]+=s;sq[p]+=s*s;sh[p][i]+=s;if(nb===1)win[p]++;else tie[p]++;}
     if((t&1023)===1023&&Date.now()-t0>30&&t+1<N){
       if(opts.onProgress)opts.onProgress((t+1)/N,Array.from(eq,x=>x/(t+1)));
@@ -168,6 +181,61 @@ async function computeMultiEquity(raws,board,dead,opts){
     return{equity:eq[p]/N,win:win[p]/N,tie:tie[p]/N,lose:1-(win[p]+tie[p])/N,perCombo:pc,nCombos:r.n};});
   const se=players.map((x,p)=>Math.sqrt(Math.max(0,sq[p]/N-x.equity*x.equity)/(N-1)));
   return{players,se,mode:'mc',nTrials:N};
+}
+/* ================= flop set ================= */
+/* Every flop up to swapping suits: 1755 classes of the 22100 flops, each with
+   its count n and a representative c (cards high to low, suits numbered in
+   order of first use, so the representative is the same whichever member
+   named it). Ranges built from the 13x13 grid treat suits alike, so one flop
+   per class stands for them all. Sorted by high, middle, low rank, then suits. */
+let FLOPS=null;
+function flopClasses(){
+  if(FLOPS)return FLOPS;
+  const m=new Map();
+  for(let a=0;a<52;a++)for(let b=a+1;b<52;b++)for(let c=b+1;c<52;c++){
+    const cs=[a,b,c].sort((x,y)=>(y>>2)-(x>>2)||(x&3)-(y&3)),map=[-1,-1,-1,-1];let ns=0;
+    /* within a rank the suit order is free, so try each order of equal ranks and keep the smallest naming */
+    let best=null;
+    for(const o of [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]){
+      const q=o.map(i=>cs[i]);if(q[0]>>2<q[1]>>2||q[1]>>2<q[2]>>2)continue;
+      map.fill(-1);ns=0;const r=q.map(x=>{const s=x&3;if(map[s]<0)map[s]=ns++;return(x&~3)|map[s];});
+      const k=r[0]*2704+r[1]*52+r[2];if(!best||k<best.k)best={k,r};}
+    const e=m.get(best.k);if(e)e.n++;else m.set(best.k,{c:best.r,n:1});}
+  FLOPS=[...m.values()].sort((x,y)=>(x.c[0]>>2)-(y.c[0]>>2)||(x.c[1]>>2)-(y.c[1]>>2)||(x.c[2]>>2)-(y.c[2]>>2)||
+    (x.c[0]&3)-(y.c[0]&3)||(x.c[1]&3)-(y.c[1]&3)||(x.c[2]&3)-(y.c[2]&3));
+  return FLOPS;
+}
+/* A flop's texture for the filters: suits 0 rainbow, 1 two-tone, 2 monotone;
+   pair 0 none, 1 paired, 2 trips; conn 2 when a straight is possible, 1 when
+   only an open-ender is (two ranks within a span of four), else 0. */
+function flopTexture(c){
+  const su=new Set(c.map(x=>x&3)).size,rk=[...new Set(c.map(x=>x>>2))];
+  /* ranks with the ace also low, as 0..13 */
+  const lo=rk.flatMap(r=>r===12?[13,0]:[r+1]);
+  let conn=0;
+  if(rk.length===3)for(let w=0;w<=9;w++)if(rk.every(r=>(r===12?[13,0]:[r+1]).some(x=>x>=w&&x<w+5))){conn=2;break;}
+  if(!conn)for(const x of lo)for(const y of lo)if(x<y&&y-x<=3)conn=1;
+  return{suits:3-su,pair:3-rk.length,conn,hi:c[0]>>2,mid:c[1]>>2,lo:c[2]>>2};
+}
+/* Each player's equity on every flop class, sampled with opts.trials deals
+   per flop (default 6000). Returns {flops:[{c,n,eq:[...]|null}],trials}; eq is
+   null where a range has no combo left on that flop. */
+async function computeFlopSet(raws,opts){
+  opts=opts||{};
+  const F=flopClasses(),N=Math.max(100,opts.trials||6000),rng=makeRng(opts.seed||0x5be0cd19),out=[];
+  let t0=Date.now();
+  for(let f=0;f<F.length;f++){
+    const X=mcPrep(raws,F[f].c,[]);let eq=null;
+    if(!X.error){const s=new Float64Array(X.P);
+      for(let t=0;t<N;t++){const nb=mcTrial(X,rng);if(!nb){eq=null;break;}
+        for(let p=0;p<X.P;p++)if(X.v[p]===X.best)s[p]+=1/nb;eq=s;}
+      if(eq)eq=Array.from(s,x=>x/N);}
+    out.push({c:F[f].c,n:F[f].n,eq});
+    if(Date.now()-t0>30&&f+1<F.length){
+      if(opts.onProgress)opts.onProgress((f+1)/F.length);
+      await sleep();if(opts.isStale&&opts.isStale())return{stale:true};t0=Date.now();}
+  }
+  return{flops:out,trials:N};
 }
 /* ================= made hands ================= */
 /* Strength of the best hand in 5..7 cards. eval7 only ORs cards into suit
