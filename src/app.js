@@ -241,13 +241,21 @@ function wirePanel(P){
   g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);
   const top=p=>{P.slider.value=p;P.out.textContent=p.toFixed(1)+'%';selectTopPct(P,p);schedule();};
   P.slider.addEventListener('input',()=>top(+P.slider.value));
-  for(const [label,pct] of PRESETS){
-    const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
-    b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
-  }
-  const fill=x=>{for(const r of P.w)r.fill(x);P.w.cut.clear();repaintAll(P);syncText(P);schedule();};
-  q('clrRange').addEventListener('click',()=>fill(0));
-  q('allRange').addEventListener('click',()=>fill(1));
+  /* the list: a preset's value is "p:<index>", a saved range's "s:<name>" */
+  P.sel=q('rsel');
+  P.sel.addEventListener('change',()=>{const v=P.sel.value;
+    if(v.startsWith('p:'))top(PRESETS[+v.slice(2)][1]);
+    else if(v.startsWith('s:')){const s=loadRanges().find(x=>x.name===v.slice(2));if(s)applyRange(P,s);}
+    P.sel.value=v;q('rdel').hidden=!v.startsWith('s:');});
+  const form=q('rsave'),name=q('rname'),close=()=>{form.hidden=true;};
+  q('rsaveBtn').addEventListener('click',()=>{form.hidden=!form.hidden;if(!form.hidden){name.value='';
+    const t=totalCombos(P.w);name.placeholder=(t/13.26).toFixed(1)+'%（'+t.toFixed(t%1?1:0)+' コンボ）';name.focus();}});
+  q('rcancel').addEventListener('click',close);
+  form.addEventListener('submit',e=>{e.preventDefault();const nm=name.value.trim()||name.placeholder;
+    if(!putEntry('eqranges',{name:nm,r:rangeText(P.w),x:[...P.w.cut],t:Date.now()})){flash('このブラウザでは保存できませんでした。');return;}
+    close();fillRangeLists();P.sel.value='s:'+nm;q('rdel').hidden=false;});
+  q('rdel').addEventListener('click',()=>{const v=P.sel.value;if(!v.startsWith('s:'))return;
+    dropEntry('eqranges',v.slice(2));fillRangeLists();});
   q('applyText').addEventListener('click',()=>{applyText(P);syncText(P);});
   q('callCut').addEventListener('click',()=>callCut(P));
   q('uncut').addEventListener('click',()=>{P.w.cut.clear();repaintAll(P);schedule();});
@@ -273,7 +281,31 @@ function selectTopPct(P,p){
   }
   repaintAll(P);syncText(P);
 }
+/* ---- saved ranges: named range texts with their cuts, shared by every panel ---- */
+/* Saved ranges (eqranges) and spots (eqspots) are lists of {name,t,...}, t the
+   time of the last change. A deletion stays as {name,del:true,t}, so that sync
+   can carry it to the other devices; the lists people see leave those out. */
+const rawList=k=>{try{const s=JSON.parse(localStorage.getItem(k));return Array.isArray(s)?s.filter(x=>x&&typeof x.name==='string'):[];}catch(e){return [];}};
+const storeList=(k,L)=>{try{localStorage.setItem(k,JSON.stringify(L));return true;}catch(e){return false;}};
+/* e, newest first, in place of any entry of its name */
+const putEntry=(k,e)=>{const ok=storeList(k,[e,...rawList(k).filter(x=>x.name!==e.name)]);if(ok)syncSoon();return ok;};
+const dropEntry=(k,name)=>putEntry(k,{name,del:true,t:Date.now()});
+function loadRanges(){return rawList('eqranges').filter(x=>!x.del&&typeof x.r==='string');}
+function applyRange(P,s){parseRange(s.r,P.w);for(const c of s.x||[])if(Number.isInteger(c))P.w.cut.add(c);
+  repaintAll(P);syncText(P);schedule();}
+const escHtml=t=>t.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* rebuild every panel's list, keeping each one's pick where it still exists */
+function fillRangeLists(){
+  const L=loadRanges();
+  for(const P of RP){const v=P.sel.value;
+    P.sel.innerHTML='<option value="">プリセット・保存したレンジ…</option><optgroup label="プリセット（MTT 100bb chipEV オープン）">'+
+      PRESETS.map(([l],i)=>'<option value="p:'+i+'">'+l+'</option>').join('')+'</optgroup>'+
+      (L.length?'<optgroup label="保存したレンジ">'+L.map(x=>'<option value="s:'+escHtml(x.name)+'">'+escHtml(x.name)+'</option>').join('')+'</optgroup>':'');
+    P.sel.value=[...P.sel.options].some(o=>o.value===v)?v:'';P.el.querySelector('.rdel').hidden=!P.sel.value.startsWith('s:');}
+}
 function updateRangeInfo(P){
+  /* any change to the range unpicks the list; applying a pick sets it again after */
+  if(P.sel&&P.sel.value){P.sel.value='';P.el.querySelector('.rdel').hidden=true;}
   const t=totalCombos(P.w);
   P.info.textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)'+(P.w.cut.size?' 絞り込み中':'');
   P.el.querySelector('.uncut').hidden=!P.w.cut.size;
@@ -705,8 +737,7 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
 
 /* ---- spots: named snapshots of mode, cards and both ranges, newest first ---- */
 const spotDlg=$('spotdlg');
-function loadSpots(){try{const s=JSON.parse(localStorage.getItem('eqspots'));return Array.isArray(s)?s.filter(x=>x&&typeof x.name==='string'):[];}catch(e){return [];}}
-function storeSpots(L){try{localStorage.setItem('eqspots',JSON.stringify(L));return true;}catch(e){return false;}}
+function loadSpots(){return rawList('eqspots').filter(x=>!x.del);}
 const cardStr=a=>live(a).map(c=>RANKS[c>>2]+SYM[c&3]).join('');
 function snapshot(){return {mode,hero:live(hero),board:live(board),r:ranges.map(rangeText),x:ranges.map(w=>[...w.cut]),t:Date.now()};}
 /* what the spot is, as the default name and the line under each saved one */
@@ -734,7 +765,7 @@ function drawSpots(){
       (s.t?' · '+new Date(s.t).toLocaleDateString():'');
     b.addEventListener('click',()=>applySpot(s));
     d.type='button';d.className='tbtn spotdel';d.textContent='削除';d.setAttribute('aria-label','「'+s.name+'」を削除');
-    d.addEventListener('click',()=>{storeSpots(loadSpots().filter(x=>x.name!==s.name));$('spotMsg').textContent='「'+s.name+'」を削除しました。';drawSpots();});
+    d.addEventListener('click',()=>{dropEntry('eqspots',s.name);$('spotMsg').textContent='「'+s.name+'」を削除しました。';drawSpots();});
     li.append(b,d);ul.appendChild(li);
   }
 }
@@ -743,10 +774,35 @@ $('spotBtn').addEventListener('click',()=>{closeMenu();$('spotName').value='';$(
 $('spotForm').addEventListener('submit',e=>{e.preventDefault();
   const s=snapshot();s.name=$('spotName').value.trim()||spotDesc(s);
   const L=loadSpots(),over=L.some(x=>x.name===s.name);
-  if(!storeSpots([s,...L.filter(x=>x.name!==s.name)])){$('spotMsg').textContent='このブラウザでは保存できませんでした。';return;}
+  if(!putEntry('eqspots',s)){$('spotMsg').textContent='このブラウザでは保存できませんでした。';return;}
   $('spotMsg').textContent='「'+s.name+'」を'+(over?'上書き':'保存')+'しました。';$('spotName').value='';drawSpots();});
 $('spotClose').addEventListener('click',()=>spotDlg.close());
 onBackdrop(spotDlg,()=>spotDlg.close());
+
+/* ---- sync across devices: the app keeps one set of saved ranges and spots
+   on the server (api/sync.js), which does the merging; the page sends all it
+   has, deletions included, and keeps what comes back. Where no such server
+   answers (a file, a Claude Artifact, a plain static server) it stays off
+   without a word. ---- */
+let syncOn=/^https?:$/.test(location.protocol),syncTimer=null,syncWarned=false;
+function syncSoon(){if(!syncOn)return;clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,800);}
+async function syncNow(){
+  if(!syncOn)return;
+  /* entries saved before sync had no time; the server needs one */
+  const all=k=>rawList(k).map(x=>Object.assign({},x,{t:x.t||1})),sentAt=Date.now();
+  try{
+    const r=await fetch('/api/sync',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({data:{ranges:all('eqranges'),spots:all('eqspots')}})});
+    if(r.status===404||r.status===405||r.status===501){syncOn=false;return;}
+    const j=await r.json();if(!r.ok)throw new Error(j.error||'HTTP '+r.status);
+    /* anything saved here while the request was out stays, and goes up next time */
+    let fresh=false;
+    for(const [k,L] of [['eqranges',j.data.ranges],['eqspots',j.data.spots]]){
+      const mine=rawList(k).filter(x=>x.t>sentAt);if(mine.length)fresh=true;
+      storeList(k,[...mine,...L.filter(x=>!mine.some(m=>m.name===x.name))]);}
+    fillRangeLists();if(spotDlg.open)drawSpots();if(fresh)syncSoon();syncWarned=false;
+  }catch(e){if(!syncWarned)flash('保存したレンジ・スポットを同期できませんでした。');syncWarned=true;}
+}
 
 /* ---- mode and heatmap side ---- */
 const pressed=(box,el)=>{for(const x of box.children)x.setAttribute('aria-pressed',x===el?'true':'false');};
@@ -799,9 +855,10 @@ new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRec
 stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
 /* ---- boot ---- */
-applyTheme();buildSlots();buildPicker();buildPanels();buildHeatGrid();buildFsFilters();startWorker();
+applyTheme();buildSlots();buildPicker();buildPanels();fillRangeLists();buildHeatGrid();buildFsFilters();startWorker();
 if(!load()){
   hero=[(12<<2)|3,(11<<2)|3]; board=[];
   selectTopPct(RP[1],15);
 }
 setMode(mode);run();
+syncNow();

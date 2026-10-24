@@ -87,11 +87,18 @@
           </div>
         </div>
         <div class="gridwrap"><div class="rgrid" role="grid" aria-label="169ハンドのレンジグリッド"></div></div>
-        <div class="presets"></div>
-        <div class="rowend">
-          <button class="tbtn clrRange">レンジをクリア</button>
-          <button class="tbtn allRange">全ハンド (100%)</button>
+        <!-- presets and saved ranges in one list; picking one applies it. 保存 opens the
+             name field below; 削除 shows while a saved range is picked. -->
+        <div class="presetrow">
+          <select class="rsel" aria-label="プリセット・保存したレンジ"></select>
+          <button class="tbtn rsaveBtn" type="button">保存</button>
+          <button class="tbtn rdel" type="button" hidden>削除</button>
         </div>
+        <form class="rsave" hidden>
+          <input type="text" class="rname" maxlength="40" autocomplete="off" aria-label="保存するレンジの名前">
+          <button class="tbtn" type="submit">保存する</button>
+          <button class="tbtn rcancel" type="button">やめる</button>
+        </form>
         <div class="rowend">
           <button class="tbtn callCut" title="ボードに対して、自分のカードで1ペア以上か、バックドア以外のドローがあるコンボだけを残します">コールできるハンドに絞る</button>
           <button class="tbtn uncut" hidden>絞り込みを解除</button>
@@ -216,14 +223,21 @@
     <ul>
       <li>ドラッグで連続選択できます。選択済みのマスから始めると消去になります。</li>
       <li>テキストでウェイトを付けると部分的なレンジになります。マスの塗りの高さがウェイトです。</li>
-      <li>グリッド上のスライダーは上位n%のハンドを一括で選びます。その順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
+      <li>グリッド上のスライダーは上位n%のハンドを一括で選びます（左端の 0% で空、右端の 100% で全ハンド）。その順序はランダムハンドに対するオールインエクイティ順（AA 85.2% 〜 32o 32.3%）です。</li>
       <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
+      <li>スライダーの下のプルダウンで、プリセット（MTT 100bb chipEV のオープン頻度：UTG 16.5% 〜 SB 88%）や保存したレンジを選ぶと、そのレンジになります。</li>
+      <li>「保存」で今のレンジに名前を付けて保存できます（絞り込みも含む。同じ名前なら上書き）。保存したレンジはどのプレイヤーのパネルからも選べ、選んでいる間は「削除」で消せます。公開したサイトでは端末間で同期します。</li>
       <li>「コールできるハンドに絞る」は、ボードが3枚以上のとき、自分のカードで1ペア以上（ボードだけのペアは数えない）か、バックドア以外のドローがあるコンボだけを残します。スートごとに残すので、たとえば AKs はフラッシュドローの1コンボだけ残ることがあり、マスの塗りの高さが残った割合になります。マスを塗り直すかプリセット・テキストを適用すると絞り込みは外れます。絞り込み中のレンジのテキストは絞り込み前のものです。</li>
     </ul>
     <h3>スポット</h3>
     <ul>
       <li>右上のしおりのボタン（スポットの保存・呼び出し）で、モード・ボード・ヒーローのハンド・すべてのレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
-      <li>名前を空欄にすると「A♠K♠ vs 14.8%」のような名前が自動で付きます。保存先はこのブラウザだけです。</li>
+      <li>名前を空欄にすると「A♠K♠ vs 14.8%」のような名前が自動で付きます。公開したサイトでは端末間で同期します。</li>
+    </ul>
+    <h3>端末間の同期</h3>
+    <ul>
+      <li>保存したレンジとスポットはサーバーにも保存され、このサイトを開いたすべての端末（PC とスマホなど）で同じものが使えます。保存・削除のたびと、ページを開いたときに自動で同期します。</li>
+      <li>同じ名前のものは新しく保存した方が残り、削除もほかの端末に伝わります。公開したサイトでだけ同期します（ファイルを直接開いたときや Claude の Artifact では、このブラウザの中だけです）。</li>
     </ul>
     <h3>結果とハンド別エクイティ</h3>
     <ul>
@@ -251,7 +265,7 @@
   <div class="note spotmsg" id="spotMsg" role="status"></div>
   <ul class="spotlist" id="spotList" aria-label="保存したスポット"></ul>
   <div class="note" id="spotEmpty">保存したスポットはまだありません。</div>
-  <div class="note">モード・ボード・ヒーローのハンド・すべてのレンジを保存します。同じ名前で保存すると上書きします。保存先はこのブラウザだけです。</div>
+  <div class="note">モード・ボード・ヒーローのハンド・すべてのレンジを保存します。同じ名前で保存すると上書きします。公開したサイトでは端末間で同期します。</div>
 </dialog>
 <dialog class="dlg pickdlg" id="pickdlg" aria-labelledby="pickttl">
   <div class="dlghd">

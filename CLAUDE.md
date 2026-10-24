@@ -45,6 +45,17 @@ npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8�
 - `RANK_ORDER` は実行時に JSON を読むのではなく、ビルドが `const RANK_ORDER=[...]` を app.js の前に差し込む（UI だけが使うので #engine には入れない）。`src/rank-order.json` を変えたら `npm run build` が必要
 - 外部 `<script src>` の追加はテストで禁止されている（スタイルシートは fonts.googleapis.com のみ許可）
 
+## 端末間の同期（api/sync.js）
+
+保存したレンジ（localStorage `eqranges`）とスポット（`eqspots`）は、Vercel Function `api/sync.js` 経由で
+Upstash for Redis（プロジェクトにつないだ Marketplace リソース。環境変数 `KV_REST_API_URL` / `KV_REST_API_TOKEN`）にも保存される。
+アプリ全体で保存データは1つ（キー `eq:saved`）で、サイトを開けば誰でも読み書きできる（個人用ツールとしての割り切り）。
+
+- `api/` は Vercel が関数として配る Node の CommonJS で、`src/` のクラシックスクリプトの決まりの外。依存ゼロを保つため Upstash は REST を `fetch` で叩く
+- マージはサーバーだけが持つ（名前ごとに `t` が新しい方、削除は `{name, del:true, t}` として残して伝える）。ページは全部送って返ってきたものを保存する
+- ページは http(s) で開かれたときだけ同期を試み、`/api/sync` が 404 などなら黙って同期を止める（静的サーバー・Artifact・ファイル直開き）
+- 手元で API ごと動かすときは `.claude/launch.json` の `vercel`（`vercel dev`）。`vercel env pull .env.local --yes` が要る。テスト（`test/sync.test.js`）は Upstash の代わりを差し込むので環境変数なしで動く
+
 ## 主要な内部表現
 
 - **カード** = `rank<<2 | suit`（0..51）。rank 0..12 = `'23456789TJQKA'`、suit 0..3 = `'cdhs'`
