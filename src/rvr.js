@@ -187,9 +187,11 @@ function madeHands(raw,board,used){
    hand category alone (a pair on the board is not the combo's pair). Returns
    [made, draw] as indexes into MADE and DRAW, strongest first; each combo
    lands in exactly one of each, the first that fits. draw is -1 on the river.
-   A combo that has made a straight or better draws to nothing. */
+   A combo that has made a straight or better draws to nothing. A flush draw is
+   the nuts when a hole card is the highest of its suit not on the board; with a
+   straight draw as well it is still a combo draw. */
 const MADE=['ストレート以上','セット・ツーペア','オーバーペア・トップペア','ミドルペア','弱いペア','ハイカード'];
-const DRAW=['コンボドロー','フラッシュドロー','両面（ダブルガット含む）','ガットショット','バックドアのみ','ドローなし'];
+const DRAW=['コンボドロー','ナッツフラッシュドロー','フラッシュドロー','両面（ダブルガット含む）','ガットショット','バックドアのみ','ドローなし'];
 function handClass(x,y,board){
   const L=board.length,hv=evalN([x,y,...board]),bv=evalN(board),hx=x>>2,hy=y>>2;
   let bm=0;for(const c of board)bm|=1<<(c>>2);
@@ -203,17 +205,20 @@ function handClass(x,y,board){
   else if(hx===hy||bc[hx]||bc[hy])made=4;
   else made=5;
   if(L>=5)return[made,-1];
-  if(made===0)return[made,5];
+  if(made===0)return[made,6];
   /* flush draws: a suit one short (or, on the flop, two short) with a hole card in it */
   const sc=new Int8Array(4);for(const c of [x,y,...board])sc[c&3]++;
   const inHole=s=>(x&3)===s||(y&3)===s;
-  let fd=false,bdf=false;for(let s=0;s<4;s++){if(sc[s]===4&&inHole(s))fd=true;if(sc[s]===3&&inHole(s))bdf=true;}
+  let fd=false,nut=false,bdf=false;
+  for(let s=0;s<4;s++){
+    if(sc[s]===4&&inHole(s)){fd=true;let top=12;while(board.includes(top<<2|s))top--;nut=x===(top<<2|s)||y===(top<<2|s);}
+    if(sc[s]===3&&inHole(s))bdf=true;}
   /* straight draws: the ranks that would complete a straight the board alone would not */
   const m=bm|1<<hx|1<<hy,fills=extra=>STRAIGHT[m|extra]>=0&&STRAIGHT[bm|extra]<0;
   let outs=0;for(let r=0;r<13;r++)if(!(m>>r&1)&&fills(1<<r))outs++;
   let bds=false;
   if(L===3&&!outs)for(let r=0;r<13&&!bds;r++)for(let t=r+1;t<13;t++)if(!(m>>r&1)&&!(m>>t&1)&&fills(1<<r|1<<t)){bds=true;break;}
-  const draw=fd&&outs?0:fd?1:outs>=2?2:outs?3:L===3&&(bdf||bds)?4:5;
+  const draw=fd&&outs?0:nut?1:fd?2:outs>=2?3:outs?4:L===3&&(bdf||bds)?5:6;
   return[made,draw];
 }
 /* "ワンペア QQ (A 9 5)" from an eval7 strength */

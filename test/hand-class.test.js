@@ -40,7 +40,11 @@ test('straights and flushes the combo makes, but not ones the board makes alone'
 });
 
 test('flush and straight draws', () => {
-  assert.strictEqual(draw('AhQh', 'Ks 9h 4h'), 'フラッシュドロー');
+  assert.strictEqual(draw('AhQh', 'Ks 9h 4h'), 'ナッツフラッシュドロー');
+  assert.strictEqual(draw('Qh2h', 'Ks 9h 4h'), 'フラッシュドロー');
+  assert.strictEqual(draw('KhJh', 'Ah 7h 2c'), 'ナッツフラッシュドロー', 'the ace is on the board, so the king is the nuts');
+  assert.strictEqual(draw('QhJh', 'Ah 7h 2c'), 'フラッシュドロー');
+  assert.strictEqual(draw('Ah5h', 'Kh 4h 3c'), 'コンボドロー', 'a nut flush draw with a straight draw is still a combo draw');
   assert.strictEqual(draw('As7h', 'Ks 9h 4h 2c'), 'ドローなし', 'one heart and two on board is only three');
   assert.strictEqual(draw('6c5c', 'Ks 8h 7d'), '両面（ダブルガット含む）');
   assert.strictEqual(draw('Jc8s', '9h 7d 5c'), '両面（ダブルガット含む）', 'a double gutter has two ranks too');
