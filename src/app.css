@@ -337,6 +337,12 @@ th:first-child,td:first-child{text-align:left}
 .fsfilt .segbtns{flex-wrap:wrap;width:max-content;max-width:100%}
 .fsfilt .segbtns button{padding:5px 8px}
 #fsMsg{color:var(--ink-3)}
+.fsmini{margin-top:6px;user-select:none;-webkit-user-select:none}
+.fsminibox{position:relative;height:44px;border-radius:4px;overflow:hidden;background:var(--surface-3);cursor:pointer;touch-action:none}
+.fsminibox canvas{display:block;width:100%;height:100%}
+.fsview{position:absolute;top:0;bottom:0;border:2px solid var(--ink);border-radius:3px;background:color-mix(in oklab,var(--surface) 35%,transparent);pointer-events:none}
+.fsmlab{position:relative;height:16px;font-family:var(--ff-num);font-size:10.5px;font-weight:600;color:var(--ink-2)}
+.fsmlab span{position:absolute;top:2px;white-space:nowrap}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}

@@ -146,7 +146,7 @@ function applyTheme(){
   pressed($('themeBtns'),$('themeBtns').querySelector('[data-t="'+theme+'"]'));
   /* range cells, heatmap and legend carry inline colours mixed from the palette */
   refreshPalette();drawLegend();
-  if(RP.length){for(const P of RP)repaintGrid(P);if(lastRes)drawHeat(lastRes);}
+  if(RP.length){for(const P of RP)repaintGrid(P);if(lastRes)drawHeat(lastRes);if(fsRes)drawMini();}
 }
 try{const t=localStorage.getItem('eqtheme');if(t==='light'||t==='dark')theme=t;}catch(e){}
 darkMq.addEventListener('change',()=>{if(theme==='auto')applyTheme();});
@@ -606,9 +606,9 @@ function runFlopSet(){
    ranks high to low in their suit's colour */
 function drawFlopSet(){
   const bars=$('fsBars');
-  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';return;}
+  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';fsShown=[];drawMini();return;}
   const names=fsRes.names,P=names.length;
-  const L=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
+  const L=fsShown=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
   bars.innerHTML=L.map(f=>'<div class="fsb" data-i="'+fsRes.flops.indexOf(f)+'"><div class="fsst">'+
     (f.eq?f.eq.map((x,k)=>'<i class="c'+k+'" style="height:'+(x*100).toFixed(2)+'%"></i>').join(''):'')+'</div>'+
     '<div class="fsl">'+f.c.map(c=>'<b class="s'+(c&3)+'">'+RANKS[c>>2]+'</b>').join('')+'</div></div>').join('');
@@ -617,7 +617,40 @@ function drawFlopSet(){
   for(const f of L)if(f.eq){n+=f.n;for(let k=0;k<P;k++)s[k]+=f.eq[k]*f.n;}
   $('fsKey').innerHTML=(n?[...s].map((x,k)=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(x/n*100).toFixed(1)+'%</b></span>').join(''):'')+
     '<span>'+L.length.toLocaleString()+' 種（'+n.toLocaleString()+' 通り）のフロップ</span>';
+  $('fsScroll').scrollLeft=0;drawMini();
 }
+/* The overview under the bars: the same filtered flops squeezed into the
+   width, the scrolled-to stretch framed, and where each high card starts. */
+let fsShown=[];
+function drawMini(){
+  const box=$('fsMini');box.hidden=!fsRes||!fsShown.length;if(box.hidden)return;
+  const cv=$('fsMiniC'),w=cv.clientWidth,h=cv.clientHeight,dpr=window.devicePixelRatio||1,n=fsShown.length,bw=w/n;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  const col=['--hero','--opp','--opp2'].map(cssVar);
+  fsShown.forEach((f,i)=>{if(!f.eq)return;let y=h;
+    /* a hair wider than its slot, so neighbouring columns leave no seams */
+    f.eq.forEach((x,k)=>{const d=x*h;g.fillStyle=col[k];g.fillRect(i*bw,y-d,bw+0.5,d);y-=d;});});
+  /* labels at each high card's first flop; ones that would crowd the last merge into it ("2345") */
+  const lab=[];let last=-99;
+  fsShown.forEach((f,i)=>{if(i&&f.c[0]>>2===fsShown[i-1].c[0]>>2)return;const x=i*bw,r=RANKS[f.c[0]>>2];
+    if(lab.length&&x-last<14)lab[lab.length-1][1]+=r;else{lab.push([x,r]);last=x;}});
+  $('fsMLab').innerHTML=lab.map(([x,t])=>'<span style="left:'+x.toFixed(1)+'px">'+t+'</span>').join('');
+  frameMini();
+}
+function frameMini(){
+  const sc=$('fsScroll'),v=$('fsView'),W=sc.scrollWidth||1,w=$('fsMiniC').clientWidth;
+  v.style.left=(sc.scrollLeft/W*w)+'px';v.style.width=Math.max(6,sc.clientWidth/W*w)+'px';
+}
+$('fsScroll').addEventListener('scroll',frameMini);
+/* tap or drag on the overview: centre the bars on that point */
+(()=>{const mb=$('fsMini').querySelector('.fsminibox');let on=false;
+  const go=e=>{const r=mb.getBoundingClientRect(),sc=$('fsScroll');
+    sc.scrollLeft=(e.clientX-r.left)/r.width*sc.scrollWidth-sc.clientWidth/2;};
+  mb.addEventListener('pointerdown',e=>{on=true;mb.setPointerCapture(e.pointerId);go(e);});
+  mb.addEventListener('pointermove',e=>{if(on)go(e);});
+  for(const t of ['pointerup','pointercancel'])mb.addEventListener(t,()=>{on=false;});
+  new ResizeObserver(()=>{if(fsRes)drawMini();}).observe(mb);})();
 $('fsRun').addEventListener('click',runFlopSet);
 $('fsBars').addEventListener('click',e=>{const b=e.target.closest('.fsb');if(!b)return;
   board=fsRes.flops[+b.dataset.i].c.slice();render();schedule();window.scrollTo({top:0,behavior:'smooth'});});

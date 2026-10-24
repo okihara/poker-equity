@@ -343,6 +343,12 @@ th:first-child,td:first-child{text-align:left}
 .fsfilt .segbtns{flex-wrap:wrap;width:max-content;max-width:100%}
 .fsfilt .segbtns button{padding:5px 8px}
 #fsMsg{color:var(--ink-3)}
+.fsmini{margin-top:6px;user-select:none;-webkit-user-select:none}
+.fsminibox{position:relative;height:44px;border-radius:4px;overflow:hidden;background:var(--surface-3);cursor:pointer;touch-action:none}
+.fsminibox canvas{display:block;width:100%;height:100%}
+.fsview{position:absolute;top:0;bottom:0;border:2px solid var(--ink);border-radius:3px;background:color-mix(in oklab,var(--surface) 35%,transparent);pointer-events:none}
+.fsmlab{position:relative;height:16px;font-family:var(--ff-num);font-size:10.5px;font-weight:600;color:var(--ink-2)}
+.fsmlab span{position:absolute;top:2px;white-space:nowrap}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
@@ -509,6 +515,12 @@ th:first-child,td:first-child{text-align:left}
         <div class="fsy"><span style="bottom:100%">100</span><span style="bottom:75%">75</span><span style="bottom:50%">50</span><span style="bottom:25%">25</span><span style="bottom:0">0</span></div>
         <div class="fsscroll" id="fsScroll"><div class="fsbars" id="fsBars"></div></div>
         <i class="fsgrid" aria-hidden="true"></i>
+        <!-- overview: every bar shrunk to the width, the visible stretch framed; tap or drag to go there -->
+        <div></div>
+        <div class="fsmini" id="fsMini" hidden>
+          <div class="fsminibox"><canvas id="fsMiniC"></canvas><i class="fsview" id="fsView"></i></div>
+          <div class="fsmlab" id="fsMLab"></div>
+        </div>
       </div>
       <div class="fsfilt" id="fsFilt"></div>
     </div>
@@ -591,7 +603,7 @@ th:first-child,td:first-child{text-align:left}
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
-      <li>フロップ集合分析は、スートの入れ替えで同じになるものをまとめた全 1,755 種のフロップについて、各プレイヤーのエクイティを積み上げの縦棒で並べます（下からヒーロー・相手・相手2）。ボードの指定とは関係なく全フロップを計算し、右のフィルターで絞り込めます。棒をクリックするとそのフロップがボードに入ります。</li>
+      <li>フロップ集合分析は、スートの入れ替えで同じになるものをまとめた全 1,755 種のフロップについて、各プレイヤーのエクイティを積み上げの縦棒で並べます（下からヒーロー・相手・相手2）。ボードの指定とは関係なく全フロップを計算し、右のフィルターで絞り込めます。棒をクリックするとそのフロップがボードに入ります。一番下の帯は全体の縮図で、タップやドラッグでその位置を表示します（枠がいま見えている範囲、下の文字は最も高いカード）。</li>
       <li>フロップ集合分析はレンジ vs レンジと3人モードで使えます。各フロップを数千回のモンテカルロで計算するので、1本ごとに ±1% 程度の誤差があります。見出し横の平均は、絞り込んだフロップを出現回数で重み付けした平均です。</li>
       <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
       <li>各レンジの上の棒はバケツです。「エクイティ」は、そのレンジのコンボをそのプレイヤー自身のエクイティで7つの帯（20・35・45・55・65・80%区切り。3人モードは均等割りの 33.3% を真ん中の帯に入れて 10・20・30・40・50・70%区切り）に分けたもの。強い帯が上で、レンジの何%が各帯にあるかを示します。</li>
@@ -1199,7 +1211,7 @@ function applyTheme(){
   pressed($('themeBtns'),$('themeBtns').querySelector('[data-t="'+theme+'"]'));
   /* range cells, heatmap and legend carry inline colours mixed from the palette */
   refreshPalette();drawLegend();
-  if(RP.length){for(const P of RP)repaintGrid(P);if(lastRes)drawHeat(lastRes);}
+  if(RP.length){for(const P of RP)repaintGrid(P);if(lastRes)drawHeat(lastRes);if(fsRes)drawMini();}
 }
 try{const t=localStorage.getItem('eqtheme');if(t==='light'||t==='dark')theme=t;}catch(e){}
 darkMq.addEventListener('change',()=>{if(theme==='auto')applyTheme();});
@@ -1659,9 +1671,9 @@ function runFlopSet(){
    ranks high to low in their suit's colour */
 function drawFlopSet(){
   const bars=$('fsBars');
-  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';return;}
+  if(!fsRes){bars.innerHTML='';$('fsKey').innerHTML='';fsShown=[];drawMini();return;}
   const names=fsRes.names,P=names.length;
-  const L=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
+  const L=fsShown=fsRes.flops.filter(f=>{if(!f.tx)f.tx=flopTexture(f.c);return Object.keys(fsSel).every(k=>fsSel[k]<0||f.tx[k]===fsSel[k]);});
   bars.innerHTML=L.map(f=>'<div class="fsb" data-i="'+fsRes.flops.indexOf(f)+'"><div class="fsst">'+
     (f.eq?f.eq.map((x,k)=>'<i class="c'+k+'" style="height:'+(x*100).toFixed(2)+'%"></i>').join(''):'')+'</div>'+
     '<div class="fsl">'+f.c.map(c=>'<b class="s'+(c&3)+'">'+RANKS[c>>2]+'</b>').join('')+'</div></div>').join('');
@@ -1670,7 +1682,40 @@ function drawFlopSet(){
   for(const f of L)if(f.eq){n+=f.n;for(let k=0;k<P;k++)s[k]+=f.eq[k]*f.n;}
   $('fsKey').innerHTML=(n?[...s].map((x,k)=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(x/n*100).toFixed(1)+'%</b></span>').join(''):'')+
     '<span>'+L.length.toLocaleString()+' 種（'+n.toLocaleString()+' 通り）のフロップ</span>';
+  $('fsScroll').scrollLeft=0;drawMini();
 }
+/* The overview under the bars: the same filtered flops squeezed into the
+   width, the scrolled-to stretch framed, and where each high card starts. */
+let fsShown=[];
+function drawMini(){
+  const box=$('fsMini');box.hidden=!fsRes||!fsShown.length;if(box.hidden)return;
+  const cv=$('fsMiniC'),w=cv.clientWidth,h=cv.clientHeight,dpr=window.devicePixelRatio||1,n=fsShown.length,bw=w/n;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  const col=['--hero','--opp','--opp2'].map(cssVar);
+  fsShown.forEach((f,i)=>{if(!f.eq)return;let y=h;
+    /* a hair wider than its slot, so neighbouring columns leave no seams */
+    f.eq.forEach((x,k)=>{const d=x*h;g.fillStyle=col[k];g.fillRect(i*bw,y-d,bw+0.5,d);y-=d;});});
+  /* labels at each high card's first flop; ones that would crowd the last merge into it ("2345") */
+  const lab=[];let last=-99;
+  fsShown.forEach((f,i)=>{if(i&&f.c[0]>>2===fsShown[i-1].c[0]>>2)return;const x=i*bw,r=RANKS[f.c[0]>>2];
+    if(lab.length&&x-last<14)lab[lab.length-1][1]+=r;else{lab.push([x,r]);last=x;}});
+  $('fsMLab').innerHTML=lab.map(([x,t])=>'<span style="left:'+x.toFixed(1)+'px">'+t+'</span>').join('');
+  frameMini();
+}
+function frameMini(){
+  const sc=$('fsScroll'),v=$('fsView'),W=sc.scrollWidth||1,w=$('fsMiniC').clientWidth;
+  v.style.left=(sc.scrollLeft/W*w)+'px';v.style.width=Math.max(6,sc.clientWidth/W*w)+'px';
+}
+$('fsScroll').addEventListener('scroll',frameMini);
+/* tap or drag on the overview: centre the bars on that point */
+(()=>{const mb=$('fsMini').querySelector('.fsminibox');let on=false;
+  const go=e=>{const r=mb.getBoundingClientRect(),sc=$('fsScroll');
+    sc.scrollLeft=(e.clientX-r.left)/r.width*sc.scrollWidth-sc.clientWidth/2;};
+  mb.addEventListener('pointerdown',e=>{on=true;mb.setPointerCapture(e.pointerId);go(e);});
+  mb.addEventListener('pointermove',e=>{if(on)go(e);});
+  for(const t of ['pointerup','pointercancel'])mb.addEventListener(t,()=>{on=false;});
+  new ResizeObserver(()=>{if(fsRes)drawMini();}).observe(mb);})();
 $('fsRun').addEventListener('click',runFlopSet);
 $('fsBars').addEventListener('click',e=>{const b=e.target.closest('.fsb');if(!b)return;
   board=fsRes.flops[+b.dataset.i].c.slice();render();schedule();window.scrollTo({top:0,behavior:'smooth'});});
