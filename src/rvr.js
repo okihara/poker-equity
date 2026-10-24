@@ -121,6 +121,54 @@ async function computeRangeEquity(rawA,rawB,board,dead,opts){
     se=sd>0?Math.sqrt(v/(N*(N-1)))/(sd/N):0;}
   return rvrResult(A,B,wA,tA,nA,wB,tB,nB,{mode:mc?'mc':'exact',se,nRunouts:N});
 }
+/* ================= multiway ================= */
+/* Three or more ranges all-in. Summing over every disjoint triple is out of
+   reach, so this samples: one combo from each range by weight, all redrawn
+   until no two share a card -- exactly the product of the weights conditioned
+   on disjoint hands, the joint the heads-up engine sums -- then the rest of
+   the board. Each player takes a share of the pot per trial: 1 alone at the
+   top, 1/k in a k-way split. Returns {players:[{equity,win,tie,lose,perCombo,
+   nCombos}],se:[...],mode:'mc',nTrials}; perCombo as computeRangeEquity's. */
+async function computeMultiEquity(raws,board,dead,opts){
+  opts=opts||{};dead=dead||[];
+  const L=board.length;
+  if(L!==0&&(L<3||L>5))return{error:'ボードは0枚か3〜5枚にしてください。'};
+  const used=new Uint8Array(52);for(const c of board)used[c]=1;for(const c of dead)used[c]=1;
+  const R=raws.map(r=>rvrPrep(r,used)),P=R.length,e=R.findIndex(r=>!r.n);
+  if(e>=0)return{error:'プレイヤー'+(e+1)+'のレンジのコンボがすべてブロックされています。'};
+  const cum=R.map(r=>{const c=new Float64Array(r.n);let s=0;for(let i=0;i<r.n;i++){s+=r.w[i];c[i]=s;}return c;});
+  const draw=(c,u)=>{const x=u*c[c.length-1];let lo=0,hi=c.length-1;while(lo<hi){const m=(lo+hi)>>1;if(c[m]>x)hi=m;else lo=m+1;}return lo;};
+  const deck=[];for(let c=0;c<52;c++)if(!used[c])deck.push(c);
+  const D=deck.length,k=5-L,N=Math.max(1000,opts.trials||1000000),rng=makeRng(opts.seed||0x2545f491);
+  /* per combo: pot share won and trials dealt; per player: totals and squares for the error */
+  const sh=R.map(r=>new Float64Array(r.n)),ct=R.map(r=>new Float64Array(r.n));
+  const win=new Float64Array(P),tie=new Float64Array(P),eq=new Float64Array(P),sq=new Float64Array(P);
+  const pick=new Int32Array(P),v=new Int32Array(P),b=new Int32Array(5),stamp=new Int32Array(52);
+  for(let i=0;i<L;i++)b[i]=board[i];
+  /* a card is taken in this attempt when stamp[c]===st, so nothing needs clearing */
+  let st=0,tries=0,t0=Date.now();
+  for(let t=0;t<N;t++){
+    for(;;){st++;let ok=true;
+      for(let p=0;p<P;p++){const r=R[p],i=draw(cum[p],rng()),x=r.c0[i],y=r.c1[i];
+        if(stamp[x]===st||stamp[y]===st){ok=false;break;}stamp[x]=st;stamp[y]=st;pick[p]=i;}
+      if(ok)break;
+      if(++tries>20000&&t===0)return{error:'レンジどうしでカードが重ならない組み合わせがありません。'};}
+    for(let s=0;s<k;s++){let c;do c=deck[(rng()*D)|0];while(stamp[c]===st);stamp[c]=st;b[L+s]=c;}
+    let best=-1,nb=0;
+    for(let p=0;p<P;p++){const r=R[p],i=pick[p],x=eval7(r.c0[i],r.c1[i],b[0],b[1],b[2],b[3],b[4]);v[p]=x;
+      if(x>best){best=x;nb=1;}else if(x===best)nb++;}
+    for(let p=0;p<P;p++){const i=pick[p];ct[p][i]++;if(v[p]!==best)continue;
+      const s=1/nb;eq[p]+=s;sq[p]+=s*s;sh[p][i]+=s;if(nb===1)win[p]++;else tie[p]++;}
+    if((t&1023)===1023&&Date.now()-t0>30&&t+1<N){
+      if(opts.onProgress)opts.onProgress((t+1)/N,Array.from(eq,x=>x/(t+1)));
+      await sleep();if(opts.isStale&&opts.isStale())return{stale:true};t0=Date.now();}
+  }
+  const players=R.map((r,p)=>{const pc=[];
+    for(let i=0;i<r.n;i++)if(ct[p][i]>0)pc.push({a:r.c0[i],b:r.c1[i],w:r.w[i],eq:sh[p][i]/ct[p][i],share:ct[p][i]/N});
+    return{equity:eq[p]/N,win:win[p]/N,tie:tie[p]/N,lose:1-(win[p]+tie[p])/N,perCombo:pc,nCombos:r.n};});
+  const se=players.map((x,p)=>Math.sqrt(Math.max(0,sq[p]/N-x.equity*x.equity)/(N-1)));
+  return{players,se,mode:'mc',nTrials:N};
+}
 /* ================= made hands ================= */
 /* Strength of the best hand in 5..7 cards. eval7 only ORs cards into suit
    masks, so repeating a card changes nothing: a short hand is padded with its

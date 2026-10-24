@@ -22,6 +22,7 @@ function refreshPalette(){
   PAL.hi=rgb2oklab(hex2rgb(cssVar('--pole-hi')));
   PAL.lo=rgb2oklab(hex2rgb(cssVar('--pole-lo')));
   PAL.opp=rgb2oklab(hex2rgb(cssVar('--opp')));
+  PAL.opp2=rgb2oklab(hex2rgb(cssVar('--opp2')));
   PAL.hero=rgb2oklab(hex2rgb(cssVar('--hero')));
   PAL.surf=rgb2oklab(hex2rgb(cssVar('--surface-2')));
 }
@@ -32,18 +33,25 @@ function divergeLab(eq){ // eq 0..1, midpoint .5
   const s=Math.sign(t)*Math.pow(Math.abs(t),0.72);
   return mix(PAL.mid,s>=0?PAL.hi:PAL.lo,Math.abs(s));}
 const divergeColor=eq=>oklab2rgb(divergeLab(eq));
+/* Three players split the pot a third each, so in 3-player mode the scale's
+   midpoint moves to 1/3: 0..1/3 fills the low half, 1/3..1 the high half. */
+const eqT=e=>mode!=='multi'?e:e<1/3?e*1.5:0.5+(e-1/3)*0.75;
+const sideLab=k=>[PAL.hero,PAL.opp,PAL.opp2][k];
 const lum=c=>0.2126*s2l(c[0])+0.7152*s2l(c[1])+0.0722*s2l(c[2]);
 const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 
 /* ================= state ================= */
 /* mode 'hand': hero's two cards vs ranges[1]. mode 'range': ranges[0] vs
-   ranges[1], each edited in its own panel RP[k], hero's first. */
+   ranges[1], each edited in its own panel RP[k], hero's first. mode 'multi'
+   (wide screens only): ranges[0], [1] and [2] all-in three ways. */
 /* dead cards have no input for now; the engine still takes them */
 const dead=[];
 let hero=[], board=[], activeSlot=null; // the slot the open picker fills
 let mode='hand', hmSide=1; // hmSide: the range the heatmap shows
 const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
-const ranges=[newRange(),newRange()];
+const ranges=[newRange(),newRange(),newRange()];
+const PN=['ヒーロー','相手1','相手2']; // player names in 3-player mode
+const wideMq=window.matchMedia('(min-width:1100px)'); // where the 3-player button shows
 let precision=2000, lastRes=null;
 const SLOTS={hero:{cap:2,label:'ヒーロー'},board:{cap:5,label:'ボード'}};
 const cardsOf=k=>k==='hero'?hero:board;
@@ -146,15 +154,16 @@ $('themeBtns').addEventListener('click',e=>{const b=e.target.closest('button');i
   theme=b.dataset.t;try{localStorage.setItem('eqtheme',theme);}catch(e){}applyTheme();});
 $('pickRemove').addEventListener('click',()=>{if(!activeSlot)return;
   cardsOf(activeSlot.kind)[activeSlot.i]=null;schedule();closePicker();});
-/* ---- range panels: villain's #rp1 is in the markup, hero's #rp0 its clone ---- */
+/* ---- range panels: villain's #rp1 is in the markup; hero's #rp0 and the
+   3-player mode's second villain #rp2 are its clones ---- */
 const RP=[];
 function buildPanels(){
-  const v=$('rp1'),h=v.cloneNode(true);
-  h.id='rp0';h.dataset.k='0';
+  const v=$('rp1'),h=v.cloneNode(true),v2=v.cloneNode(true);
+  h.id='rp0';h.dataset.k='0';v2.id='rp2';v2.dataset.k='2';
   h.insertBefore($('heroGrp'),h.querySelector('.reditor'));
-  v.parentNode.insertBefore(h,v);
-  for(const el of [h,v]){
-    const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=k?'相手':'ヒーロー';
+  v.parentNode.insertBefore(h,v);v.after(v2);
+  for(const el of [h,v,v2]){
+    const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=['ヒーロー','相手','相手2'][k];
     const P={k,el,w:ranges[k],eq:Array.from({length:13},()=>new Float64Array(13).fill(-1)),paintW:1,
       grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle')};
     P.title.id='h-range'+k;el.setAttribute('aria-labelledby',P.title.id);
@@ -189,11 +198,11 @@ function paintCell(P,i,j){
   /* Colour carries equity (the heatmap's scale, or the side's own colour before
      a result exists) at full strength; weight is the filled height from the
      bottom, so a partial weight never turns into a washed-out tint. */
-  if(w>0){const e=P.eq[i][j],c=oklab2rgb(e>=0?divergeLab(e):P.k?PAL.opp:PAL.hero),h=(w*100).toFixed(1)+'%';
+  if(w>0){const e=P.eq[i][j],c=oklab2rgb(e>=0?divergeLab(eqT(e)):sideLab(P.k)),h=(w*100).toFixed(1)+'%';
     el.classList.add('on');
     el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
     el.style.color=w>=0.5?inkOn(c):'var(--ink)';
-    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / ヒーロー '+(e*100).toFixed(1)+'%':'');}
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / '+(mode==='multi'?PN[P.k]:'ヒーロー')+' '+(e*100).toFixed(1)+'%':'');}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintGrid(P){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(P,i,j);}
@@ -319,14 +328,16 @@ function startWorker(){
     worker.onerror=()=>{worker=null;for(const [id,j] of jobs){jobs.delete(id);calcHere(j).then(j.done);}};
   }catch(e){worker=null;}
 }
-const calcHere=j=>computeRangeEquity(j.a,j.b,j.board,j.dead,{mcBoards:j.mcBoards,onProgress:j.onProgress,isStale:j.isStale});
+const calcHere=j=>{const o={mcBoards:j.mcBoards,trials:j.trials,onProgress:j.onProgress,isStale:j.isStale};
+  return j.multi?computeMultiEquity(j.multi,j.board,j.dead,o):computeRangeEquity(j.a,j.b,j.board,j.dead,o);};
+/* a and b: hero's and villain's ranges; or a alone as the list of every player's (3-player mode) */
 function calc(id,a,b,onProgress,isStale){
   return new Promise(done=>{
     /* a newer query supersedes the rest; the worker drops them without answering */
     for(const [k,j] of jobs){jobs.delete(k);j.done({stale:true});}
-    const j={a,b,board:live(board),dead:live(dead),mcBoards:precision,onProgress,isStale,done};
+    const multi=b?null:a,j={a,b,multi,board:live(board),dead:live(dead),mcBoards:precision,trials:precision>2000?5e6:1e6,onProgress,isStale,done};
     if(!worker){calcHere(j).then(done);return;}
-    jobs.set(id,j);worker.postMessage({id,a,b,board:j.board,dead:j.dead,opts:{mcBoards:j.mcBoards}});
+    jobs.set(id,j);worker.postMessage({id,a,b,multi,board:j.board,dead:j.dead,opts:{mcBoards:j.mcBoards,trials:j.trials}});
   });
 }
 
@@ -339,6 +350,7 @@ function schedule(){clearTimeout(timer);timer=setTimeout(run,180);}
 function clearResult(msg){
   lastRes=null;
   $('eqv').textContent='–';$('eqse').textContent='';$('eqv').parentNode.classList.remove('interim');$('precBtn').hidden=true;
+  drawMres(null);
   for(const id of ['segW','segT','segL']){const e=$(id);e.style.width='0';e.textContent='';}
   $('kw').textContent='–';$('kt').textContent='–';$('kl').textContent='–';
   $('chips').innerHTML='';$('matchup').innerHTML='';$('resmsg').textContent=msg;$('resmsg').hidden=!msg;
@@ -354,22 +366,50 @@ async function run(){
   const H=live(hero),nb=live(board).length;
   if(mode==='hand'&&H.length<2){clearResult('ヒーローの2枚を選んでください。');return;}
   if(nb===1||nb===2){clearResult('ボードは0枚・3枚・4枚・5枚のどれかにしてください。');return;}
-  const a=mode==='hand'?[[H[0],H[1],1]]:rawRange(ranges[0]),b=rawRange(ranges[1]);
-  if(!a.length){clearResult('ヒーローのレンジを選んでください。');return;}
-  if(!b.length){clearResult('相手のレンジを選んでください。');return;}
+  let a,b=null;
+  if(mode==='multi'){a=ranges.map(rawRange);const e=a.findIndex(r=>!r.length);
+    if(e>=0){clearResult(PN[e]+'のレンジを選んでください。');return;}}
+  else{a=mode==='hand'?[[H[0],H[1],1]]:rawRange(ranges[0]);b=rawRange(ranges[1]);
+    if(!a.length){clearResult('ヒーローのレンジを選んでください。');return;}
+    if(!b.length){clearResult('相手のレンジを選んでください。');return;}}
   $('prog').classList.add('on');$('progi').style.width='0%';
   const res=await calc(my,a,b,
     (p,eq)=>{if(my!==token)return;$('progi').style.width=(p*100).toFixed(0)+'%';
-      /* runouts go in shuffled order, so the running figure is a fair estimate */
+      /* runouts and trials go in random order, so the running figure is a fair estimate */
+      if(mode==='multi'){drawMres({players:eq.map(x=>({equity:x}))},true);return;}
       if(eq>=0){$('eqv').textContent=(eq*100).toFixed(1);$('eqv').parentNode.classList.add('interim');$('eqse').textContent='計算中';}},
     ()=>my!==token);
   if(my!==token)return;
-  $('prog').classList.remove('on');$('eqv').parentNode.classList.remove('interim');
+  $('prog').classList.remove('on');$('eqv').parentNode.classList.remove('interim');$('mres').classList.remove('interim');
   if(res.stale)return;
   if(res.error){clearResult(res.error);return;}
   lastRes=res;showResult(res);save();
 }
+/* 3-player mode's figures, one block per player; r null clears them, and
+   interim greys out a running estimate (it has equity only). */
+function drawMres(r,interim){
+  const m=$('mres');
+  if(!m.children.length)m.innerHTML=PN.map((n,k)=>'<div class="mp" data-k="'+k+'"><div class="mpn">'+n+'</div>'+
+    '<div class="mpv"><span class="v">–</span><span class="pct">%</span></div><div class="mps"></div></div>').join('');
+  m.classList.toggle('interim',!!interim);
+  for(let k=0;k<3;k++){const b=m.children[k],p=r&&r.players[k];
+    b.querySelector('.v').textContent=p?(p.equity*100).toFixed(interim?1:2):'–';
+    b.querySelector('.mps').textContent=!p?'':interim?'計算中':
+      '± '+(r.se[k]*196).toFixed(2)+' · 勝ち '+(p.win*100).toFixed(1)+'% · 引分 '+(p.tie*100).toFixed(1)+'%';}
+}
+function showMulti(r){
+  $('resmsg').hidden=true;drawMres(r);
+  $('precBtn').hidden=false;
+  $('precBtn').textContent=precision>2000?'標準精度に戻す':'高精度で再計算（約5倍の時間）';
+  $('matchup').innerHTML=PN.join(' <span style="color:var(--ink-3)">vs</span> ')+
+    (live(board).length?' <span style="color:var(--ink-3)">/ ボード</span> '+handStr(live(board)):' <span style="color:var(--ink-3)">（プリフロップ）</span>');
+  const chips=PN.map((n,k)=>[n+' '+totalCombos(ranges[k]).toFixed(0)+'コンボ → '+r.players[k].nCombos,false]);
+  chips.push(['モンテカルロ '+r.nTrials.toLocaleString()+'回',true]);
+  $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
+  drawHeat(r);
+}
 function showResult(r){
+  if(mode==='multi'){showMulti(r);return;}
   $('resmsg').hidden=true;
   $('eqv').textContent=(r.equity*100).toFixed(2);
   $('eqse').textContent=r.se>0?'± '+(r.se*196).toFixed(2):'完全列挙';
@@ -406,7 +446,9 @@ function clearHeat(){
    keep out of most pairs moves the cell less. */
 function aggregate(r,k){
   const agg=Array.from({length:13},()=>Array.from({length:13},()=>({s:0,m:0,w:0,n:0})));
-  for(const pc of k?r.opp.perCombo:r.perCombo){const [i,j]=cellOf(pc.a,pc.b);const a=agg[i][j],eq=k?1-pc.eq:pc.eq;
+  /* 3-player mode: each player's own equity, there being no one view to take */
+  const pcs=r.players?r.players[k].perCombo:k?r.opp.perCombo:r.perCombo,own=!!r.players;
+  for(const pc of pcs){const [i,j]=cellOf(pc.a,pc.b);const a=agg[i][j],eq=k&&!own?1-pc.eq:pc.eq;
     a.s+=eq*pc.share;a.m+=pc.share;a.w+=pc.w;a.n++;}
   return agg;
 }
@@ -420,10 +462,10 @@ function drawHeat(r){
   for(let i=0;i<13;i++)for(let j=0;j<13;j++){
     const el=hmCells[i][j],a=agg[i][j];
     if(a.m<=0){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.removeAttribute('data-tip');continue;}
-    const eq=a.s/a.m,c=divergeColor(eq);
+    const eq=a.s/a.m,c=divergeColor(eqT(eq));
     el.className='hc on';el.style.background=toCss(c);el.style.color=inkOn(c);
     el.textContent=Math.round(eq*100);
-    el.dataset.tip=CELLN[i][j]+'  ヒーロー '+(eq*100).toFixed(1)+'%  ('+a.n+'コンボ, ウェイト'+Math.round(a.w/a.n*100)+'%)';
+    el.dataset.tip=CELLN[i][j]+'  '+(r.players?PN[hmSide]:'ヒーロー')+' '+(eq*100).toFixed(1)+'%  ('+a.n+'コンボ, ウェイト'+Math.round(a.w/a.n*100)+'%)';
     rows.push([CELLN[i][j],eq,a.n,a.w/a.n]);
   }
   rows.sort((x,y)=>x[1]-y[1]);
@@ -434,7 +476,7 @@ function drawHeat(r){
    hero's hand slotted in where it ranks. Weighted combo counts throughout, so
    "above hero" reads as a share of the range, not of the rows. */
 function drawMade(){
-  const B=live(board),H=live(hero),show=B.length>=3,b=rawRange(ranges[1]);$('mhPanel').hidden=!show;
+  const B=live(board),H=live(hero),show=B.length>=3&&mode!=='multi',b=rawRange(ranges[1]);$('mhPanel').hidden=!show;
   if(!show)return;
   const me=mode==='hand'&&H.length===2,G=madeHands(b,B,[...live(dead),...(me?H:[])]);
   const fmt=t=>t.toFixed(t%1?1:0),tot=G.reduce((s,g)=>s+g.w,0),pct=x=>tot>0?(x/tot*100).toFixed(1)+'%':'–';
@@ -466,6 +508,9 @@ hmEl.addEventListener('pointerleave',()=>tip.classList.remove('on'));
 function drawLegend(){
   const stops=[];for(let i=0;i<=10;i++){const c=divergeColor(i/10);stops.push(toCss(c)+' '+(i*10)+'%');}
   $('legbar').style.background='linear-gradient(90deg,'+stops.join(',')+')';
+  /* the ticks sit at 0, 25, 50, 75, 100% of the bar; eqT moves what they mean */
+  const t=mode==='multi'?['0%','17%','33%','67%','100%']:['0%','25%','50%','75%','100%'];
+  [...$('legticks').children].forEach((x,i)=>x.textContent=t[i]);
 }
 
 /* ---- persistence ---- */
@@ -476,8 +521,8 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
-  for(let k=0;k<2;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
-  if(s.mode==='range')mode='range';if(s.hm===0)hmSide=0;
+  for(let k=0;k<3;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
+  mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
   return true;}catch(e){return false;}}
@@ -491,15 +536,16 @@ function snapshot(){return {mode,hero:live(hero),board:live(board),r:ranges.map(
 /* what the spot is, as the default name and the line under each saved one */
 function spotDesc(s){
   const pct=t=>{const w=newRange();parseRange(t||'',w);return (totalCombos(w)/13.26).toFixed(1)+'%';};
-  return (s.mode==='range'?pct(s.r[0]):cardStr(s.hero)||'?')+' vs '+pct(s.r[1])+(s.board.length?' / '+cardStr(s.board):'');
+  return (s.mode==='hand'?cardStr(s.hero)||'?':pct(s.r[0]))+' vs '+pct(s.r[1])+(s.mode==='multi'?' vs '+pct(s.r[2]):'')+(s.board.length?' / '+cardStr(s.board):'');
 }
 /* Cards come back only if they are real and unclaimed, so a hand-edited
    store cannot put one card in two slots. */
 function applySpot(s){
   const seen=new Set(),ok=c=>Number.isInteger(c)&&c>=0&&c<52&&!seen.has(c)&&seen.add(c);
   board=(s.board||[]).filter(ok).slice(0,5);hero=(s.hero||[]).filter(ok).slice(0,2);
-  for(let k=0;k<2;k++)parseRange((s.r||[])[k]||'',ranges[k]);
-  spotDlg.close();setMode(s.mode==='range'?'range':'hand');save();run();
+  /* a spot saved before 3-player mode has two ranges; the third stays as it is */
+  for(let k=0;k<3;k++){const t=(s.r||[])[k];if(k<2||typeof t==='string')parseRange(t||'',ranges[k]);}
+  spotDlg.close();setMode(okMode(s.mode));save();run();
 }
 function drawSpots(){
   const L=loadSpots(),ul=$('spotList');ul.innerHTML='';$('spotEmpty').hidden=L.length>0;
@@ -507,7 +553,7 @@ function drawSpots(){
     const li=document.createElement('li'),b=document.createElement('button'),d=document.createElement('button');
     b.type='button';b.className='spotload';b.innerHTML='<span class="nm"></span><span class="sub"></span>';
     b.firstChild.textContent=s.name;
-    b.lastChild.textContent=(s.mode==='range'?'レンジ vs レンジ':'ハンド vs レンジ')+' · '+spotDesc(s)+
+    b.lastChild.textContent=({range:'レンジ vs レンジ',multi:'3人'}[s.mode]||'ハンド vs レンジ')+' · '+spotDesc(s)+
       (s.t?' · '+new Date(s.t).toLocaleDateString():'');
     b.addEventListener('click',()=>applySpot(s));
     d.type='button';d.className='tbtn spotdel';d.textContent='削除';d.setAttribute('aria-label','「'+s.name+'」を削除');
@@ -527,10 +573,13 @@ onBackdrop(spotDlg,()=>spotDlg.close());
 
 /* ---- mode and heatmap side ---- */
 const pressed=(box,el)=>{for(const x of box.children)x.setAttribute('aria-pressed',x===el?'true':'false');};
+/* 3-player mode needs a wide screen; a save or spot made in it falls back to range vs range elsewhere */
+const okMode=m=>m==='multi'?(wideMq.matches?m:'range'):m==='range'?m:'hand';
 function setHmSide(s){
-  hmSide=mode==='hand'?1:s;
+  hmSide=mode==='hand'?1:mode!=='multi'&&s===2?1:s;
   pressed($('hmbtns'),$('hmbtns').children[hmSide]);
-  $('hmnote').textContent=hmSide?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
+  $('hmnote').textContent=mode==='multi'?PN[hmSide]+'のレンジの各ハンドでの'+PN[hmSide]+'のエクイティ（色の中央は均等割りの 33.3%）。':
+    hmSide?'相手のレンジの各ハンドに対するヒーローのエクイティ。':'ヒーローのレンジの各ハンドのエクイティ。';
   if(lastRes)drawHeat(lastRes);else clearHeat();
 }
 function setMode(m){
@@ -539,10 +588,17 @@ function setMode(m){
   /* the hero panel holds either the two-card hand or the range editor */
   $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
   $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
-  RP[0].title.textContent=m==='hand'?'ヒーローのハンド':'ヒーローのレンジ';RP[1].title.textContent='相手のレンジ';
+  const mu=m==='multi',hb=$('hmbtns').children;
+  /* 3-player mode spreads over the whole width, three range panels abreast,
+     with the result band pinned to the top in place of the sticky bar */
+  document.body.classList.toggle('multi',mu);$('cols').classList.toggle('multi',mu);RP[2].el.hidden=!mu;
+  hb[2].hidden=!mu;hb[0].textContent='ヒーローのレンジ';hb[1].textContent=mu?'相手1のレンジ':'相手のレンジ';
+  $('bignum').hidden=mu;$('mres').hidden=!mu;$('bar').hidden=mu;$('barkey').hidden=mu;
+  if(mu){stick.classList.remove('on');stick.setAttribute('aria-hidden','true');}
+  RP[0].title.textContent=m==='hand'?'ヒーローのハンド':'ヒーローのレンジ';RP[1].title.textContent=mu?'相手1のレンジ':'相手のレンジ';RP[2].title.textContent='相手2のレンジ';
   /* hero's cards were ignored in range mode, so board or dead may have taken one */
   if(m==='hand'){const u=new Set([...board,...dead]);hero=hero.map(c=>u.has(c)?null:c);}
-  lastRes=null;
+  lastRes=null;clearResult('');drawLegend();
   for(const P of RP){repaintAll(P);syncText(P);}
   setHmSide(hmSide);render();
 }
@@ -561,7 +617,7 @@ $('clrBoard').addEventListener('click',()=>{board=[];render();schedule();});
 const stick=$('stick'),eqBox=$('eqv').parentNode;
 new MutationObserver(()=>{$('stickEq').textContent=$('eqv').textContent;stick.classList.toggle('interim',eqBox.classList.contains('interim'));})
   .observe(eqBox,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
-new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRect.bottom<0;
+new IntersectionObserver(([e])=>{const on=!e.isIntersecting&&e.boundingClientRect.bottom<0&&mode!=='multi';
   stick.classList.toggle('on',on);stick.setAttribute('aria-hidden',on?'false':'true');}).observe($('boardPanel'));
 stick.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 

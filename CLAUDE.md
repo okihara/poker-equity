@@ -73,6 +73,10 @@ npm run preflop # src/preflop-table.bin を全列挙で再生成（約8分、8�
 - ボード 0枚・デッドあり: ボード単位のモンテカルロ（`se` は比推定量の標準誤差）
 - ボード 1〜2枚は非対応（`{error}`）
 
+3人モード（UI の mode `'multi'`、幅 1100px 以上でだけボタンが出る）は `computeMultiEquity(ranges, board, dead, opts)` を使う。
+モンテカルロ専用で、`opts.trials`（既定 100万）と `seed` を取り、`onProgress` の第2引数はプレイヤーごとの暫定エクイティの配列。
+戻り値は `{players:[{equity, win, tie, lose, perCombo, nCombos}], se:[...], mode:'mc', nTrials}`。Worker へは `{multi:[range,...]}` で渡す。
+
 旧エンジン `computeEquity`（ハンド vs レンジ）は `test/reference-equity.js` に移してあり、出荷しない。
 `tools/load-engine.js` がテスト用に同じスコープへ読み込み、新エンジンの交差検証に使っている。
 

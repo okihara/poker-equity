@@ -41,3 +41,12 @@ test('a newer query makes the running one stop without a result', async () => {
   const results = posted.filter((m) => m.result);
   assert.deepStrictEqual(results.map((m) => m.id), [2], 'only the newest query may answer');
 });
+
+test('a query with three ranges goes to the multiway engine', async () => {
+  const { self, posted } = fakeWorker();
+  const one = (s) => [[...parseCards(s), 1]];
+  await self.onmessage({ data: { id: 3, multi: [one('AsAh'), one('KsKh'), one('Qd2c')],
+    board: parseCards('Ac Kd 7h 4s 9c'), dead: [], opts: { trials: 1000 } } });
+  const results = posted.filter((m) => m.result);
+  assert.deepStrictEqual(results[0].result.players.map((p) => p.equity), [1, 0, 0]);
+});

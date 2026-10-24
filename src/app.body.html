@@ -4,6 +4,7 @@
       <div class="segbtns modebtns" id="mbtns" role="group" aria-label="計算モード">
         <button data-m="hand" aria-pressed="true">ハンド vs レンジ</button>
         <button data-m="range" aria-pressed="false">レンジ vs レンジ</button>
+        <button data-m="multi" aria-pressed="false" class="pconly">3人</button>
       </div>
     </div>
     <div class="menu">
@@ -21,10 +22,12 @@
     </div>
   </header>
 
-  <section class="panel" aria-label="計算結果">
+  <section class="panel" id="resPanel" aria-label="計算結果">
     <div class="res">
       <div>
-        <div class="bignum"><span class="v" id="eqv">–</span><span class="pct">%</span><span class="pm" id="eqse"></span></div>
+        <div class="bignum" id="bignum"><span class="v" id="eqv">–</span><span class="pct">%</span><span class="pm" id="eqse"></span></div>
+        <!-- 3-player mode: one figure per player instead of #eqv; app.js fills it -->
+        <div class="mres" id="mres" hidden></div>
         <button class="tbtn precbtn" id="precBtn" type="button" hidden></button>
       </div>
       <div>
@@ -37,7 +40,7 @@
           <div class="seg-t" id="segT" style="width:0"></div>
           <div class="seg-l" id="segL" style="width:0"></div>
         </div>
-        <div class="barkey">
+        <div class="barkey" id="barkey">
           <span><i style="background:var(--hero)"></i>勝ち <b id="kw" style="font-family:var(--ff-num)">–</b></span>
           <span><i style="background:var(--ink-3)"></i>引き分け <b id="kt" style="font-family:var(--ff-num)">–</b></span>
           <span><i style="background:var(--opp)"></i>負け <b id="kl" style="font-family:var(--ff-num)">–</b></span>
@@ -112,13 +115,14 @@
           <div class="segbtns" id="hmbtns" role="group" aria-label="表示するレンジ" hidden>
             <button data-s="0" aria-pressed="false">ヒーローのレンジ</button>
             <button data-s="1" aria-pressed="true">相手のレンジ</button>
+            <button data-s="2" aria-pressed="false" hidden>相手2のレンジ</button>
           </div>
         </div>
         <div class="note" style="margin:0" id="hmnote">相手のレンジの各ハンドに対するヒーローのエクイティ。</div>
       </div>
       <div class="legend">
         <div class="legbar" id="legbar"></div>
-        <div class="legticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+        <div class="legticks" id="legticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
       </div>
     </div>
     <div class="hmgrid"><div class="hm" id="hm"></div></div>
@@ -128,7 +132,7 @@
     </details>
   </section>
 
-  <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません。エクイティはチョップを 1/2 として計算しています。</p>
+  <p class="foot">プリフロップは全ボードを数え上げた事前計算表、フロップ以降は残りのランナウトをすべて数え上げるので誤差はありません（3人モードはモンテカルロ）。エクイティはチョップを 1/2 として計算しています。</p>
 </div>
 <!-- Hero's hand (hand mode), board and equity, pinned to the top once the board panel scrolls away. -->
 <div class="stick" id="stick" aria-hidden="true"><div class="stickin">
@@ -146,6 +150,8 @@
     <ul>
       <li>右上で「ハンド vs レンジ」と「レンジ vs レンジ」（どちらもヘッズアップ）を切り替えます。</li>
       <li>ヒーロー欄は、ハンド vs レンジなら2枚のハンド、レンジ vs レンジならレンジの入力になります。</li>
+      <li>「3人」は横幅の広い画面（PC）でだけ出るモードで、ヒーロー・相手1・相手2の3つのレンジを横に並べて入力し、3人オールインのエクイティを計算します。</li>
+      <li>3人モードは組み合わせが多すぎて数え上げられないので、モンテカルロ（100万回の試行）で計算します。結果の ± は95%の誤差の幅です。</li>
     </ul>
     <h3>カード（ボード・ヒーローのハンド）</h3>
     <ul>
@@ -162,12 +168,12 @@
     </ul>
     <h3>スポット</h3>
     <ul>
-      <li>右上のしおりのボタン（スポットの保存・呼び出し）で、モード・ボード・ヒーローのハンド・両方のレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
+      <li>右上のしおりのボタン（スポットの保存・呼び出し）で、モード・ボード・ヒーローのハンド・すべてのレンジを名前を付けて保存し、あとで一覧から呼び出せます。</li>
       <li>名前を空欄にすると「A♠K♠ vs 14.8%」のような名前が自動で付きます。保存先はこのブラウザだけです。</li>
     </ul>
     <h3>結果とハンド別エクイティ</h3>
     <ul>
-      <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。</li>
+      <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
@@ -185,7 +191,7 @@
   <div class="note spotmsg" id="spotMsg" role="status"></div>
   <ul class="spotlist" id="spotList" aria-label="保存したスポット"></ul>
   <div class="note" id="spotEmpty">保存したスポットはまだありません。</div>
-  <div class="note">モード・ボード・ヒーローのハンド・両方のレンジを保存します。同じ名前で保存すると上書きします。保存先はこのブラウザだけです。</div>
+  <div class="note">モード・ボード・ヒーローのハンド・すべてのレンジを保存します。同じ名前で保存すると上書きします。保存先はこのブラウザだけです。</div>
 </dialog>
 <dialog class="dlg pickdlg" id="pickdlg" aria-labelledby="pickttl">
   <div class="dlghd">

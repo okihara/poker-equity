@@ -5,6 +5,7 @@
   --ink:#0e1620; --ink-2:#46535f; --ink-3:#77838f;
   --hero:#eb6834; --hero-soft:#fdeee7;
   --opp:#2a78d6; --opp-soft:#e4eefb;
+  --opp2:#8a4fc8; /* the 3-player mode's second villain */
   --clear:#c23a3a; --clear-soft:#fcecec; --clear-line:#efc4c4;
   --pole-hi:#2a78d6; --pole-lo:#d03b3b; --pole-mid:#eceef1;
   --spade:#0e1620; --heart:#d03b3b; --diamond:#2a78d6; --club:#0ca30c;
@@ -23,6 +24,7 @@
   --ink:#e6ebf0; --ink-2:#aab5c0; --ink-3:#7c8995;
   --hero:#f0794a; --hero-soft:#3a2219;
   --opp:#4b92e6; --opp-soft:#192a40;
+  --opp2:#a77ee8;
   --clear:#e06464; --clear-soft:#341b1d; --clear-line:#5a2c2f;
   --pole-hi:#3d8ae4; --pole-lo:#dc4d4d; --pole-mid:#3a434d;
   --spade:#e6ebf0; --heart:#ec5f5f; --diamond:#5aa0f0; --club:#2fbf4a;
@@ -63,6 +65,24 @@ button{font:inherit;color:inherit;cursor:pointer}
   .cols{grid-template-areas:"board board" "hero villain"}
   .cols.rvr{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
+/* 3-player mode, wide screens only: the page takes the whole width and the
+   three ranges sit abreast under the board. The result band stays pinned to
+   the top instead of the sticky bar, which only knows one equity. */
+@media(max-width:1099px){.pconly{display:none}}
+#rp2{grid-area:villain2}
+.cols.multi{grid-template-areas:"board" "hero" "villain" "villain2"}
+@media(min-width:960px){.cols.multi{grid-template-areas:"board board board" "hero villain villain2";grid-template-columns:repeat(3,minmax(0,1fr))}}
+body.multi .wrap{max-width:none;padding:0 12px 12px}
+body.multi #resPanel{position:sticky;top:0;z-index:20}
+.mres{display:flex;gap:28px}
+.mp{display:flex;flex-direction:column;gap:2px}
+.mpn{font-size:12px;font-weight:600}
+.mpv{display:flex;align-items:baseline;gap:4px;font-variant-numeric:tabular-nums}
+.mpv .v{font-size:42px;font-weight:700;letter-spacing:-.035em;line-height:.95}
+.mpv .pct{font-size:15px;font-weight:700}
+.mps{font-size:10.5px;font-family:var(--ff-num);color:var(--ink-3);min-height:1.4em;white-space:nowrap}
+.mp[data-k="0"]{color:var(--hero)}.mp[data-k="1"]{color:var(--opp)}.mp[data-k="2"]{color:var(--opp2)}
+.mres.interim .mpv{opacity:.5}
 .bignum.interim .v,.bignum.interim .pct{opacity:.5}
 /* sticky hand, board and equity: off-screen until the board panel scrolls away */
 .stick{position:fixed;top:0;left:0;right:0;z-index:30;padding-top:env(safe-area-inset-top,0px);background:var(--surface);
@@ -275,3 +295,4 @@ th:first-child,td:first-child{text-align:left}
 .warn{color:var(--pole-lo);font-size:12px}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
+.rpanel[data-k="2"] .rtitle{color:var(--opp2)}
