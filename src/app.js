@@ -435,19 +435,21 @@ function showResult(r){
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
-/* Equity buckets: how much of each range sits in each band of its own player's
-   equity. Bands break at the legend's ticks, so 3-player mode centres on the
-   1/3 fair share as the colours do. Combos count by share, so blockers weigh in. */
-const bkCut=()=>mode==='multi'?[1/6,1/3,2/3]:[0.25,0.5,0.75];
+/* Equity buckets: how much of each range sits in each of seven bands of its
+   own player's equity. The middle band straddles the fair share -- 50% heads-up,
+   1/3 three ways -- and the bands narrow towards it, where the close calls are.
+   Combos count by share, so blockers weigh in. */
+const bkCut=()=>mode==='multi'?[10,20,30,40,50,70]:[20,35,45,55,65,80];
 function drawBuckets(r){
-  const cut=bkCut(),nm=mode==='multi'?['〜17%','17〜33%','33〜67%','67%〜']:['〜25%','25〜50%','50〜75%','75%〜'];
+  const c=bkCut(),cut=c.map(x=>x/100),nm=[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%');
   for(const P of RP){
     /* a lone hand has nothing to bucket; the second villain plays only three ways */
     P.bk.hidden=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;if(P.bk.hidden)continue;
-    const b=[0,0,0,0],pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
-    for(const pc of pcs){let i=0;while(i<3&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
-    P.bk.firstChild.innerHTML=r?b.map((x,i)=>'<i class="b'+i+'" style="width:'+(x*100)+'%" title="エクイティ '+nm[i]+': レンジの '+(x*100).toFixed(1)+'%">'+(x>=0.08?Math.round(x*100)+'%':'')+'</i>').join(''):'';
-    P.bk.lastChild.innerHTML=nm.map((n,i)=>'<span><i class="b'+i+'"></i>'+n+'</span>').join('');}
+    const b=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
+    for(const pc of pcs){let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
+    /* strongest band on top; with no result the rows stay, empty, so the panel keeps its height */
+    P.bk.innerHTML=[...b.keys()].reverse().map(i=>'<span class="bkn"><i class="b'+i+'"></i>'+nm[i]+'</span>'+
+      '<span class="bkt"><i class="b'+i+'" style="width:'+(b[i]*100)+'%"></i></span><span class="bkp">'+(r?(b[i]*100).toFixed(1)+'%':'–')+'</span>').join('');}
 }
 /* Equity chart: each player's combos sorted by their own equity, as a step
    line whose steps are as wide as the combo's share. chart keeps the sorted

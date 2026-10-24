@@ -317,17 +317,21 @@ th:first-child,td:first-child{text-align:left}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
-.bk{margin-bottom:8px}
-.bkbar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--surface-3);gap:1px}
-.bkbar>i{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;white-space:nowrap;font-style:normal;
-  font-family:var(--ff-num);font-size:10.5px;font-weight:600;transition:width .25s ease}
-.bk .b0{background:color-mix(in oklab,var(--side) 22%,var(--surface-3));color:var(--ink)}
-.bk .b1{background:color-mix(in oklab,var(--side) 48%,var(--surface-3));color:var(--ink)}
-.bk .b2{background:color-mix(in oklab,var(--side) 74%,var(--surface-3));color:#fff}
-.bk .b3{background:var(--side);color:#fff}
-.bkkey{display:flex;gap:10px;margin-top:4px;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3);flex-wrap:wrap}
-.bkkey span{display:flex;align-items:center;gap:4px}
-.bkkey i{width:8px;height:8px;border-radius:2px;display:block}
+.bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em;gap:3px 8px;align-items:center;
+  font-family:var(--ff-num);font-size:10.5px;color:var(--ink-2)}
+/* one row per band, strongest first: the band, a bar as long as its share of the range, the share */
+.bkn{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.bkn i{width:8px;height:8px;border-radius:2px;display:block}
+.bkt{height:10px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.bkt i{display:block;height:100%;transition:width .25s ease}
+.bkp{text-align:right;font-variant-numeric:tabular-nums}
+.bk .b0{background:color-mix(in oklab,var(--side) 14%,var(--surface-3))}
+.bk .b1{background:color-mix(in oklab,var(--side) 28%,var(--surface-3))}
+.bk .b2{background:color-mix(in oklab,var(--side) 43%,var(--surface-3))}
+.bk .b3{background:color-mix(in oklab,var(--side) 57%,var(--surface-3))}
+.bk .b4{background:color-mix(in oklab,var(--side) 71%,var(--surface-3))}
+.bk .b5{background:color-mix(in oklab,var(--side) 86%,var(--surface-3))}
+.bk .b6{background:var(--side)}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
 .rpanel[data-k="2"] .rtitle{color:var(--opp2)}

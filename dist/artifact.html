@@ -323,17 +323,21 @@ th:first-child,td:first-child{text-align:left}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
-.bk{margin-bottom:8px}
-.bkbar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--surface-3);gap:1px}
-.bkbar>i{display:flex;align-items:center;justify-content:center;min-width:0;overflow:hidden;white-space:nowrap;font-style:normal;
-  font-family:var(--ff-num);font-size:10.5px;font-weight:600;transition:width .25s ease}
-.bk .b0{background:color-mix(in oklab,var(--side) 22%,var(--surface-3));color:var(--ink)}
-.bk .b1{background:color-mix(in oklab,var(--side) 48%,var(--surface-3));color:var(--ink)}
-.bk .b2{background:color-mix(in oklab,var(--side) 74%,var(--surface-3));color:#fff}
-.bk .b3{background:var(--side);color:#fff}
-.bkkey{display:flex;gap:10px;margin-top:4px;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3);flex-wrap:wrap}
-.bkkey span{display:flex;align-items:center;gap:4px}
-.bkkey i{width:8px;height:8px;border-radius:2px;display:block}
+.bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em;gap:3px 8px;align-items:center;
+  font-family:var(--ff-num);font-size:10.5px;color:var(--ink-2)}
+/* one row per band, strongest first: the band, a bar as long as its share of the range, the share */
+.bkn{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.bkn i{width:8px;height:8px;border-radius:2px;display:block}
+.bkt{height:10px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.bkt i{display:block;height:100%;transition:width .25s ease}
+.bkp{text-align:right;font-variant-numeric:tabular-nums}
+.bk .b0{background:color-mix(in oklab,var(--side) 14%,var(--surface-3))}
+.bk .b1{background:color-mix(in oklab,var(--side) 28%,var(--surface-3))}
+.bk .b2{background:color-mix(in oklab,var(--side) 43%,var(--surface-3))}
+.bk .b3{background:color-mix(in oklab,var(--side) 57%,var(--surface-3))}
+.bk .b4{background:color-mix(in oklab,var(--side) 71%,var(--surface-3))}
+.bk .b5{background:color-mix(in oklab,var(--side) 86%,var(--surface-3))}
+.bk .b6{background:var(--side)}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
 .rpanel[data-k="2"] .rtitle{color:var(--opp2)}
@@ -416,7 +420,7 @@ th:first-child,td:first-child{text-align:left}
            wrapping row cannot push it onto a line of its own in one panel only -->
       <div class="rhead"><h2 class="rtitle">相手のレンジ</h2><span class="chip rangeInfo">–</span></div>
       <!-- equity buckets: the share of this range in each band of its own equity; app.js fills it -->
-      <div class="bk"><div class="bkbar"></div><div class="bkkey"></div></div>
+      <div class="bk"></div>
       <div class="reditor">
         <div class="ctl">
           <div class="ctl-block">
@@ -540,7 +544,7 @@ th:first-child,td:first-child{text-align:left}
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
       <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
-      <li>各レンジの上のバーはエクイティバケツです。そのレンジのコンボを、そのプレイヤー自身のエクイティで4つの帯（25%・50%・75%区切り。3人モードは均等割りの 33.3% を中心に 17%・33%・67%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
+      <li>各レンジの上の7本の棒はエクイティバケツです（強い帯が上）。そのレンジのコンボを、そのプレイヤー自身のエクイティで7つの帯（20・35・45・55・65・80%区切り。3人モードは均等割りの 33.3% を真ん中の帯に入れて 10・20・30・40・50・70%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
   </div>
@@ -1326,19 +1330,21 @@ function showResult(r){
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
-/* Equity buckets: how much of each range sits in each band of its own player's
-   equity. Bands break at the legend's ticks, so 3-player mode centres on the
-   1/3 fair share as the colours do. Combos count by share, so blockers weigh in. */
-const bkCut=()=>mode==='multi'?[1/6,1/3,2/3]:[0.25,0.5,0.75];
+/* Equity buckets: how much of each range sits in each of seven bands of its
+   own player's equity. The middle band straddles the fair share -- 50% heads-up,
+   1/3 three ways -- and the bands narrow towards it, where the close calls are.
+   Combos count by share, so blockers weigh in. */
+const bkCut=()=>mode==='multi'?[10,20,30,40,50,70]:[20,35,45,55,65,80];
 function drawBuckets(r){
-  const cut=bkCut(),nm=mode==='multi'?['〜17%','17〜33%','33〜67%','67%〜']:['〜25%','25〜50%','50〜75%','75%〜'];
+  const c=bkCut(),cut=c.map(x=>x/100),nm=[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%');
   for(const P of RP){
     /* a lone hand has nothing to bucket; the second villain plays only three ways */
     P.bk.hidden=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;if(P.bk.hidden)continue;
-    const b=[0,0,0,0],pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
-    for(const pc of pcs){let i=0;while(i<3&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
-    P.bk.firstChild.innerHTML=r?b.map((x,i)=>'<i class="b'+i+'" style="width:'+(x*100)+'%" title="エクイティ '+nm[i]+': レンジの '+(x*100).toFixed(1)+'%">'+(x>=0.08?Math.round(x*100)+'%':'')+'</i>').join(''):'';
-    P.bk.lastChild.innerHTML=nm.map((n,i)=>'<span><i class="b'+i+'"></i>'+n+'</span>').join('');}
+    const b=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
+    for(const pc of pcs){let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
+    /* strongest band on top; with no result the rows stay, empty, so the panel keeps its height */
+    P.bk.innerHTML=[...b.keys()].reverse().map(i=>'<span class="bkn"><i class="b'+i+'"></i>'+nm[i]+'</span>'+
+      '<span class="bkt"><i class="b'+i+'" style="width:'+(b[i]*100)+'%"></i></span><span class="bkp">'+(r?(b[i]*100).toFixed(1)+'%':'–')+'</span>').join('');}
 }
 /* Equity chart: each player's combos sorted by their own equity, as a step
    line whose steps are as wide as the combo's share. chart keeps the sorted
