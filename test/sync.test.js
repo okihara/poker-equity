@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { merge, handle, DB_KEY } = require('../api/sync.js');
+const { merge, handle, DB_KEY, corsHeaders } = require('../api/sync.js');
 
 const env = { KV_REST_API_URL: 'https://redis.test', KV_REST_API_TOKEN: 't' };
 
@@ -56,4 +56,11 @@ test('bad bodies, other methods and missing storage are refused', async () => {
   assert.strictEqual((await handle({ method: 'PUT', body: {} }, env, u.f)).status, 405);
   assert.strictEqual((await handle({ method: 'GET' }, {}, u.f)).status, 503);
   assert.strictEqual(u.db.size, 0, 'nothing was written');
+});
+
+test('only local pages get CORS headers', () => {
+  for (const o of ['http://localhost:8731', 'http://localhost', 'http://127.0.0.1:3000'])
+    assert.strictEqual(corsHeaders(o)['Access-Control-Allow-Origin'], o, o);
+  for (const o of [undefined, 'null', 'https://localhost:8731', 'http://localhost.evil.test', 'https://example.com', 'http://192.168.0.2:8731'])
+    assert.deepStrictEqual(corsHeaders(o), {}, String(o));
 });

@@ -781,9 +781,11 @@ onBackdrop(spotDlg,()=>spotDlg.close());
 
 /* ---- sync across devices: the app keeps one set of saved ranges and spots
    on the server (api/sync.js), which does the merging; the page sends all it
-   has, deletions included, and keeps what comes back. Where no such server
-   answers (a file, a Claude Artifact, a plain static server) it stays off
-   without a word. ---- */
+   has, deletions included, and keeps what comes back. A page on localhost
+   (a dev server with no API of its own) uses the deployed one, which lets
+   local origins in. Where no such server answers (a file, a Claude Artifact)
+   it stays off without a word. ---- */
+const SYNC_URL=/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?'https://poker-equity-khaki.vercel.app/api/sync':'/api/sync';
 let syncOn=/^https?:$/.test(location.protocol),syncTimer=null,syncWarned=false;
 function syncSoon(){if(!syncOn)return;clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,800);}
 async function syncNow(){
@@ -791,7 +793,7 @@ async function syncNow(){
   /* entries saved before sync had no time; the server needs one */
   const all=k=>rawList(k).map(x=>Object.assign({},x,{t:x.t||1})),sentAt=Date.now();
   try{
-    const r=await fetch('/api/sync',{method:'POST',headers:{'content-type':'application/json'},
+    const r=await fetch(SYNC_URL,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({data:{ranges:all('eqranges'),spots:all('eqspots')}})});
     if(r.status===404||r.status===405||r.status===501){syncOn=false;return;}
     const j=await r.json();if(!r.ok)throw new Error(j.error||'HTTP '+r.status);

@@ -13,6 +13,9 @@
  *
  * Storage is the Upstash for Redis resource attached to the project, reached
  * over its REST API with plain fetch so the app stays dependency-free.
+ *
+ * A page opened from localhost calls the deployed function across origins, so
+ * those origins (and only those) get CORS headers and a preflight answer.
  */
 const KINDS = ['ranges', 'spots'];
 const DB_KEY = 'eq:saved';
@@ -35,6 +38,18 @@ function merge(a, b, now = Date.now()) {
     out[k] = [...m.values()].filter((x) => !x.del || now - x.t < KEEP_DELETED_MS).sort((x, y) => y.t - x.t);
   }
   return out;
+}
+
+const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+/* The CORS headers for a request from origin: none unless it is a local page. */
+function corsHeaders(origin) {
+  if (typeof origin !== 'string' || !LOCAL_ORIGIN.test(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'content-type',
+    Vary: 'Origin',
+  };
 }
 
 /* One Redis command over Upstash's REST API: POST the command as a JSON array. */
@@ -70,6 +85,8 @@ async function handle({ method, body }, env = process.env, f = fetch) {
 }
 
 module.exports = async function handler(req, res) {
+  for (const [k, v] of Object.entries(corsHeaders(req.headers.origin))) res.setHeader(k, v);
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   try {
     const r = await handle({ method: req.method, body: req.body });
     res.setHeader('Cache-Control', 'no-store');
@@ -81,3 +98,4 @@ module.exports = async function handler(req, res) {
 module.exports.merge = merge;
 module.exports.handle = handle;
 module.exports.DB_KEY = DB_KEY;
+module.exports.corsHeaders = corsHeaders;
