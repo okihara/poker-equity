@@ -449,8 +449,22 @@ function drawBuckets(r){
     P.bk.firstChild.innerHTML=r?b.map((x,i)=>'<i class="b'+i+'" style="width:'+(x*100)+'%" title="エクイティ '+nm[i]+': レンジの '+(x*100).toFixed(1)+'%">'+(x>=0.08?Math.round(x*100)+'%':'')+'</i>').join(''):'';
     P.bk.lastChild.innerHTML=nm.map((n,i)=>'<span><i class="b'+i+'"></i>'+n+'</span>').join('');}
 }
+/* Equity chart: each player's combos sorted by their own equity, as a step
+   line whose steps are as wide as the combo's share. chart keeps the sorted
+   combos and where each step ends, for the hover readout. */
+let chart=[];
+function drawChart(r){
+  const paths=$('plot').querySelectorAll('.ln'),names=mode==='multi'?PN:['ヒーロー','相手'];
+  const sides=!r?[]:r.players?r.players.map((p,k)=>[k,p.perCombo,p.equity]):[[0,r.perCombo,r.equity],[1,r.opp.perCombo,r.opp.equity]];
+  for(const p of paths)p.setAttribute('d','');chart=[];
+  for(const [k,pcs] of sides){
+    const s=pcs.slice().sort((a,b)=>a.eq-b.eq),ends=[];let x=0,d='';
+    for(const pc of s){const y=(100-pc.eq*100).toFixed(2);x+=pc.share*100;d+=(d?'V'+y:'M0 '+y)+'H'+x.toFixed(2);ends.push(x);}
+    paths[k].setAttribute('d',d);chart.push({s,ends,name:names[k]});}
+  $('chartKey').innerHTML=sides.map(([k,,eq])=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(eq*100).toFixed(1)+'%</b></span>').join('');
+}
 function clearHeat(){
-  drawBuckets(null);
+  drawBuckets(null);drawChart(null);
   for(const el of hmEl.querySelectorAll('.hc')){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.title='';el.removeAttribute('data-tip');}
   $('tbl').querySelector('tbody').innerHTML='';
   for(const P of RP){for(const r of P.eq)r.fill(-1);repaintGrid(P);}
@@ -469,7 +483,7 @@ function aggregate(r,k){
 }
 /* Colours both range grids, and the heatmap for the range hmSide picks. */
 function drawHeat(r){
-  drawBuckets(r);
+  drawBuckets(r);drawChart(r);
   for(const P of RP){if(mode==='hand'&&!P.k)continue;
     const agg=aggregate(r,P.k);
     for(let i=0;i<13;i++)for(let j=0;j<13;j++){const a=agg[i][j];P.eq[i][j]=a.m>0?a.s/a.m:-1;}
@@ -515,11 +529,23 @@ function drawMade(){
 /* tooltip */
 const tip=$('tip');
 hmEl.addEventListener('pointerover',e=>{const t=e.target;if(!t.dataset||!t.dataset.tip){tip.classList.remove('on');return;}
-  tip.textContent=t.dataset.tip;tip.classList.add('on');});
+  tip.textContent=t.dataset.tip;tip.classList.remove('multi');tip.classList.add('on');});
 hmEl.addEventListener('pointermove',e=>{if(!tip.classList.contains('on'))return;
   const x=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12);
   tip.style.left=x+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
 hmEl.addEventListener('pointerleave',()=>tip.classList.remove('on'));
+
+/* the chart's readout: every line's combo at the pointer's place in its range */
+const plot=$('plot'),guide=$('guide');
+plot.addEventListener('pointermove',e=>{
+  const rc=plot.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-rc.left)/rc.width*100));
+  if(!chart.length){tip.classList.remove('on');guide.classList.remove('on');return;}
+  const rows=chart.map(c=>{let i=0;while(i<c.ends.length-1&&c.ends[i]<x)i++;const pc=c.s[i],hi=Math.max(pc.a,pc.b),lo=Math.min(pc.a,pc.b);
+    return c.name+'  '+(pc.eq*100).toFixed(1)+'%  '+cardName(hi)+cardName(lo);});
+  guide.style.left=x+'%';guide.classList.add('on');
+  tip.textContent='レンジの '+x.toFixed(0)+'% 地点\n'+rows.join('\n');tip.classList.add('on','multi');
+  tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12)+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
+plot.addEventListener('pointerleave',()=>{tip.classList.remove('on','multi');guide.classList.remove('on');});
 
 function drawLegend(){
   const stops=[];for(let i=0;i<=10;i++){const c=divergeColor(i/10);stops.push(toCss(c)+' '+(i*10)+'%');}

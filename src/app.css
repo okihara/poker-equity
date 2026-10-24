@@ -296,6 +296,25 @@ th:first-child,td:first-child{text-align:left}
 .warn{color:var(--pole-lo);font-size:12px}
 .rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .rhead>h2{margin-bottom:0}
+/* equity chart: lines in a stretched 0..100 viewBox, so strokes keep their width with non-scaling-stroke */
+.eqchart{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:clamp(220px,32vw,360px) 18px;max-width:900px}
+.plot{position:relative;border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2);cursor:crosshair}
+.plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.plot .grid{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke;fill:none}
+.plot .ln{fill:none;stroke-width:2.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.ln0{stroke:var(--hero)}.ln1{stroke:var(--opp)}.ln2{stroke:var(--opp2)}
+.guide{position:absolute;top:0;bottom:0;width:1px;background:var(--ink-3);display:none}
+.plot:hover .guide.on{display:block}
+.ylab,.xlab{position:relative;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3)}
+.ylab span{position:absolute;right:5px;transform:translateY(50%)}
+.xlab span{position:absolute;top:4px;transform:translateX(-50%)}
+.chartkey{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}
+.chartkey span{display:flex;align-items:center;gap:5px}
+.chartkey i{width:10px;height:10px;border-radius:50%;display:block}
+.chartkey .c0{background:var(--hero)}.chartkey .c1{background:var(--opp)}.chartkey .c2{background:var(--opp2)}
+.chartkey b{font-family:var(--ff-num);font-weight:600}
+.tip.multi{white-space:pre}
+
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
 .bk{margin-bottom:8px}

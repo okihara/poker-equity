@@ -302,6 +302,25 @@ th:first-child,td:first-child{text-align:left}
 .warn{color:var(--pole-lo);font-size:12px}
 .rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .rhead>h2{margin-bottom:0}
+/* equity chart: lines in a stretched 0..100 viewBox, so strokes keep their width with non-scaling-stroke */
+.eqchart{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:clamp(220px,32vw,360px) 18px;max-width:900px}
+.plot{position:relative;border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2);cursor:crosshair}
+.plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.plot .grid{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke;fill:none}
+.plot .ln{fill:none;stroke-width:2.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.ln0{stroke:var(--hero)}.ln1{stroke:var(--opp)}.ln2{stroke:var(--opp2)}
+.guide{position:absolute;top:0;bottom:0;width:1px;background:var(--ink-3);display:none}
+.plot:hover .guide.on{display:block}
+.ylab,.xlab{position:relative;font-family:var(--ff-num);font-size:9.5px;color:var(--ink-3)}
+.ylab span{position:absolute;right:5px;transform:translateY(50%)}
+.xlab span{position:absolute;top:4px;transform:translateX(-50%)}
+.chartkey{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2)}
+.chartkey span{display:flex;align-items:center;gap:5px}
+.chartkey i{width:10px;height:10px;border-radius:50%;display:block}
+.chartkey .c0{background:var(--hero)}.chartkey .c1{background:var(--opp)}.chartkey .c2{background:var(--opp2)}
+.chartkey b{font-family:var(--ff-num);font-weight:600}
+.tip.multi{white-space:pre}
+
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
 .bk{margin-bottom:8px}
@@ -423,6 +442,26 @@ th:first-child,td:first-child{text-align:left}
     </section>
   </div>
 
+  <!-- Each range's combos, weakest first: across, the share of the range so far;
+       up, that combo's equity. One step line per player, drawn by app.js into a
+       0..100 viewBox stretched to the plot; the axis labels are HTML so they do not stretch. -->
+  <section class="panel" id="chartPanel" aria-labelledby="h-chart">
+    <div class="hmtitle"><h2 id="h-chart" class="seclabel">エクイティチャート</h2><div class="chartkey" id="chartKey"></div></div>
+    <div class="note" style="margin:0 0 8px">各レンジのコンボをエクイティの低い順に並べたもの。横軸はレンジの累計（%）、縦軸はそのコンボのエクイティです。</div>
+    <div class="eqchart">
+      <div class="ylab"><span style="bottom:100%">100</span><span style="bottom:75%">75</span><span style="bottom:50%">50</span><span style="bottom:25%">25</span><span style="bottom:0">0</span></div>
+      <div class="plot" id="plot">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path class="grid" d="M0 25H100M0 50H100M0 75H100M25 0V100M50 0V100M75 0V100"/>
+          <path class="ln ln0"/><path class="ln ln1"/><path class="ln ln2"/>
+        </svg>
+        <i class="guide" id="guide"></i>
+      </div>
+      <div></div>
+      <div class="xlab"><span style="left:0">0</span><span style="left:25%">25</span><span style="left:50%">50</span><span style="left:75%">75</span><span style="left:100%">100</span></div>
+    </div>
+  </section>
+
   <!-- Only with a flop, turn or river on the board; app.js fills it on every run. -->
   <section class="panel" id="mhPanel" hidden>
     <details class="mhdet" id="mhdet">
@@ -500,6 +539,7 @@ th:first-child,td:first-child{text-align:left}
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
       <li>各レンジの上のバーはエクイティバケツです。そのレンジのコンボを、そのプレイヤー自身のエクイティで4つの帯（25%・50%・75%区切り。3人モードは均等割りの 33.3% を中心に 17%・33%・67%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
@@ -1300,8 +1340,22 @@ function drawBuckets(r){
     P.bk.firstChild.innerHTML=r?b.map((x,i)=>'<i class="b'+i+'" style="width:'+(x*100)+'%" title="エクイティ '+nm[i]+': レンジの '+(x*100).toFixed(1)+'%">'+(x>=0.08?Math.round(x*100)+'%':'')+'</i>').join(''):'';
     P.bk.lastChild.innerHTML=nm.map((n,i)=>'<span><i class="b'+i+'"></i>'+n+'</span>').join('');}
 }
+/* Equity chart: each player's combos sorted by their own equity, as a step
+   line whose steps are as wide as the combo's share. chart keeps the sorted
+   combos and where each step ends, for the hover readout. */
+let chart=[];
+function drawChart(r){
+  const paths=$('plot').querySelectorAll('.ln'),names=mode==='multi'?PN:['ヒーロー','相手'];
+  const sides=!r?[]:r.players?r.players.map((p,k)=>[k,p.perCombo,p.equity]):[[0,r.perCombo,r.equity],[1,r.opp.perCombo,r.opp.equity]];
+  for(const p of paths)p.setAttribute('d','');chart=[];
+  for(const [k,pcs] of sides){
+    const s=pcs.slice().sort((a,b)=>a.eq-b.eq),ends=[];let x=0,d='';
+    for(const pc of s){const y=(100-pc.eq*100).toFixed(2);x+=pc.share*100;d+=(d?'V'+y:'M0 '+y)+'H'+x.toFixed(2);ends.push(x);}
+    paths[k].setAttribute('d',d);chart.push({s,ends,name:names[k]});}
+  $('chartKey').innerHTML=sides.map(([k,,eq])=>'<span><i class="c'+k+'"></i>'+names[k]+' <b>'+(eq*100).toFixed(1)+'%</b></span>').join('');
+}
 function clearHeat(){
-  drawBuckets(null);
+  drawBuckets(null);drawChart(null);
   for(const el of hmEl.querySelectorAll('.hc')){el.className='hc';el.style.background='';el.style.color='';el.textContent='';el.title='';el.removeAttribute('data-tip');}
   $('tbl').querySelector('tbody').innerHTML='';
   for(const P of RP){for(const r of P.eq)r.fill(-1);repaintGrid(P);}
@@ -1320,7 +1374,7 @@ function aggregate(r,k){
 }
 /* Colours both range grids, and the heatmap for the range hmSide picks. */
 function drawHeat(r){
-  drawBuckets(r);
+  drawBuckets(r);drawChart(r);
   for(const P of RP){if(mode==='hand'&&!P.k)continue;
     const agg=aggregate(r,P.k);
     for(let i=0;i<13;i++)for(let j=0;j<13;j++){const a=agg[i][j];P.eq[i][j]=a.m>0?a.s/a.m:-1;}
@@ -1366,11 +1420,23 @@ function drawMade(){
 /* tooltip */
 const tip=$('tip');
 hmEl.addEventListener('pointerover',e=>{const t=e.target;if(!t.dataset||!t.dataset.tip){tip.classList.remove('on');return;}
-  tip.textContent=t.dataset.tip;tip.classList.add('on');});
+  tip.textContent=t.dataset.tip;tip.classList.remove('multi');tip.classList.add('on');});
 hmEl.addEventListener('pointermove',e=>{if(!tip.classList.contains('on'))return;
   const x=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12);
   tip.style.left=x+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
 hmEl.addEventListener('pointerleave',()=>tip.classList.remove('on'));
+
+/* the chart's readout: every line's combo at the pointer's place in its range */
+const plot=$('plot'),guide=$('guide');
+plot.addEventListener('pointermove',e=>{
+  const rc=plot.getBoundingClientRect(),x=Math.max(0,Math.min(100,(e.clientX-rc.left)/rc.width*100));
+  if(!chart.length){tip.classList.remove('on');guide.classList.remove('on');return;}
+  const rows=chart.map(c=>{let i=0;while(i<c.ends.length-1&&c.ends[i]<x)i++;const pc=c.s[i],hi=Math.max(pc.a,pc.b),lo=Math.min(pc.a,pc.b);
+    return c.name+'  '+(pc.eq*100).toFixed(1)+'%  '+cardName(hi)+cardName(lo);});
+  guide.style.left=x+'%';guide.classList.add('on');
+  tip.textContent='レンジの '+x.toFixed(0)+'% 地点\n'+rows.join('\n');tip.classList.add('on','multi');
+  tip.style.left=Math.min(window.innerWidth-tip.offsetWidth-8,e.clientX+12)+'px';tip.style.top=(e.clientY-tip.offsetHeight-10)+'px';});
+plot.addEventListener('pointerleave',()=>{tip.classList.remove('on','multi');guide.classList.remove('on');});
 
 function drawLegend(){
   const stops=[];for(let i=0;i<=10;i++){const c=divergeColor(i/10);stops.push(toCss(c)+' '+(i*10)+'%');}

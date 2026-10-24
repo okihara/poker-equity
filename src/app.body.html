@@ -101,6 +101,26 @@
     </section>
   </div>
 
+  <!-- Each range's combos, weakest first: across, the share of the range so far;
+       up, that combo's equity. One step line per player, drawn by app.js into a
+       0..100 viewBox stretched to the plot; the axis labels are HTML so they do not stretch. -->
+  <section class="panel" id="chartPanel" aria-labelledby="h-chart">
+    <div class="hmtitle"><h2 id="h-chart" class="seclabel">エクイティチャート</h2><div class="chartkey" id="chartKey"></div></div>
+    <div class="note" style="margin:0 0 8px">各レンジのコンボをエクイティの低い順に並べたもの。横軸はレンジの累計（%）、縦軸はそのコンボのエクイティです。</div>
+    <div class="eqchart">
+      <div class="ylab"><span style="bottom:100%">100</span><span style="bottom:75%">75</span><span style="bottom:50%">50</span><span style="bottom:25%">25</span><span style="bottom:0">0</span></div>
+      <div class="plot" id="plot">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path class="grid" d="M0 25H100M0 50H100M0 75H100M25 0V100M50 0V100M75 0V100"/>
+          <path class="ln ln0"/><path class="ln ln1"/><path class="ln ln2"/>
+        </svg>
+        <i class="guide" id="guide"></i>
+      </div>
+      <div></div>
+      <div class="xlab"><span style="left:0">0</span><span style="left:25%">25</span><span style="left:50%">50</span><span style="left:75%">75</span><span style="left:100%">100</span></div>
+    </div>
+  </section>
+
   <!-- Only with a flop, turn or river on the board; app.js fills it on every run. -->
   <section class="panel" id="mhPanel" hidden>
     <details class="mhdet" id="mhdet">
@@ -178,6 +198,7 @@
     <ul>
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
+      <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
       <li>各レンジの上のバーはエクイティバケツです。そのレンジのコンボを、そのプレイヤー自身のエクイティで4つの帯（25%・50%・75%区切り。3人モードは均等割りの 33.3% を中心に 17%・33%・67%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
