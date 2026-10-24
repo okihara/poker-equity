@@ -165,7 +165,7 @@ function buildPanels(){
   for(const el of [h,v,v2]){
     const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=['ヒーロー','相手','相手2'][k];
     const P={k,el,w:ranges[k],eq:Array.from({length:13},()=>new Float64Array(13).fill(-1)),paintW:1,
-      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle'),bk:q('bk')};
+      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle'),bk:q('bk'),bkb:q('bkbtns')};
     P.title.id='h-range'+k;el.setAttribute('aria-labelledby',P.title.id);
     P.grid.setAttribute('aria-label',nm+'のレンジグリッド');P.text.setAttribute('aria-label',nm+'のレンジのテキスト表記');
     P.slider.setAttribute('aria-label',nm+'のレンジを上位何パーセントで選ぶか');
@@ -435,22 +435,36 @@ function showResult(r){
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
-/* Equity buckets: how much of each range sits in each of seven bands of its
-   own player's equity. The middle band straddles the fair share -- 50% heads-up,
-   1/3 three ways -- and the bands narrow towards it, where the close calls are.
-   Combos count by share, so blockers weigh in. */
+/* Buckets, by bkView. 'eq': how much of each range sits in each of seven bands
+   of its own player's equity; the middle band straddles the fair share -- 50%
+   heads-up, 1/3 three ways -- and the bands narrow towards it, where the close
+   calls are. 'made' and 'draw': the range split by handClass, with each class's
+   average equity; only with a flop or later (no draws on the river). Combos
+   count by share, so blockers weigh in. Strongest on top throughout. */
+let bkView='eq';
 const bkCut=()=>mode==='multi'?[10,20,30,40,50,70]:[20,35,45,55,65,80];
 function drawBuckets(r){
-  const c=bkCut(),cut=c.map(x=>x/100),nm=[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%');
+  const B=live(board),views=B.length<3?['eq']:B.length<5?['eq','made','draw']:['eq','made'],v=views.includes(bkView)?bkView:'eq';
+  const c=bkCut(),cut=c.map(x=>x/100);
+  /* names strongest first, and each combo's row in that order */
+  const nm=v==='made'?MADE:v==='draw'?DRAW:[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%').reverse();
+  const row=v==='eq'?pc=>{let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;return c.length-i;}:pc=>handClass(pc.a,pc.b,B)[v==='made'?0:1];
+  /* seven shades, the strongest row darkest */
+  const shade=j=>'b'+Math.round((nm.length-1-j)*6/(nm.length-1));
   for(const P of RP){
     /* a lone hand has nothing to bucket; the second villain plays only three ways */
-    P.bk.hidden=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;if(P.bk.hidden)continue;
-    const b=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
-    for(const pc of pcs){let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
-    /* strongest band on top; with no result the rows stay, empty, so the panel keeps its height */
-    P.bk.innerHTML=[...b.keys()].reverse().map(i=>'<span class="bkn"><i class="b'+i+'"></i>'+nm[i]+'</span>'+
-      '<span class="bkt"><i class="b'+i+'" style="width:'+(b[i]*100)+'%"></i></span><span class="bkp">'+(r?(b[i]*100).toFixed(1)+'%':'–')+'</span>').join('');}
+    const off=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;P.bk.hidden=off;P.bkb.hidden=off||views.length<2;if(off)continue;
+    for(const b of P.bkb.children){b.hidden=!views.includes(b.dataset.v);b.setAttribute('aria-pressed',b.dataset.v===v?'true':'false');}
+    const s=nm.map(()=>0),e=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
+    for(const pc of pcs){const j=row(pc);s[j]+=pc.share;e[j]+=pc.share*pc.eq;}
+    /* with no result the rows stay, empty, so the panel keeps its height */
+    P.bk.innerHTML=(v==='eq'?'':'<span></span><span></span><span class="bkh">割合</span><span class="bkh">EQ</span>')+
+      nm.map((n,j)=>'<span class="bkn"><i class="'+shade(j)+'"></i>'+n+'</span>'+
+      '<span class="bkt"><i class="'+shade(j)+'" style="width:'+(s[j]*100)+'%"></i></span><span class="bkp">'+(r?(s[j]*100).toFixed(1)+'%':'–')+'</span>'+
+      '<span class="bkq">'+(v==='eq'||!r?'':s[j]>0?(e[j]/s[j]*100).toFixed(1)+'%':'–')+'</span>').join('');}
 }
+document.addEventListener('click',e=>{const b=e.target.closest('.bkbtns button');if(!b)return;
+  bkView=b.dataset.v;save();drawBuckets(lastRes);});
 /* Equity chart: each player's combos sorted by their own equity, as a step
    line whose steps are as wide as the combo's share. chart keeps the sorted
    combos and where each step ends, for the hover readout. */
@@ -558,7 +572,7 @@ function drawLegend(){
 }
 
 /* ---- persistence ---- */
-function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
+function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,bk:bkView,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
@@ -566,7 +580,7 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<3;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
-  mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;
+  mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;if(s.bk==='made'||s.bk==='draw')bkView=s.bk;
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
   return true;}catch(e){return false;}}

@@ -183,6 +183,39 @@ function madeHands(raw,board,used){
   for(let i=0;i<R.n;i++){const v=evalN([R.c0[i],R.c1[i],...board]);let e=g.get(v);
     if(!e){e={v,w:0,combos:[]};g.set(v,e);}e.w+=R.w[i];e.combos.push([R.c0[i],R.c1[i],R.w[i]]);}
   return [...g.values()].sort((x,y)=>y.v-x.v);}
+/* What a combo has on this board, judged against the board rather than by the
+   hand category alone (a pair on the board is not the combo's pair). Returns
+   [made, draw] as indexes into MADE and DRAW, strongest first; each combo
+   lands in exactly one of each, the first that fits. draw is -1 on the river.
+   A combo that has made a straight or better draws to nothing. */
+const MADE=['ストレート以上','セット・ツーペア','オーバーペア・トップペア','ミドルペア','弱いペア','ハイカード'];
+const DRAW=['コンボドロー','フラッシュドロー','両面（ダブルガット含む）','ガットショット','バックドアのみ','ドローなし'];
+function handClass(x,y,board){
+  const L=board.length,hv=evalN([x,y,...board]),bv=evalN(board),hx=x>>2,hy=y>>2;
+  let bm=0;for(const c of board)bm|=1<<(c>>2);
+  const br=[];for(let r=12;r>=0;r--)if(bm>>r&1)br.push(r);
+  const bc=new Int8Array(13);for(const c of board)bc[c>>2]++;
+  let made;
+  if(Math.floor(hv/CAT)>=4&&hv!==bv)made=0;
+  else if(hx===hy?bc[hx]>0:bc[hx]>1||bc[hy]>1||bc[hx]&&bc[hy])made=1;
+  else if(hx===hy?hx>br[0]:hx===br[0]||hy===br[0])made=2;
+  else if(hx===hy?hx>br[1]:hx===br[1]||hy===br[1])made=3;
+  else if(hx===hy||bc[hx]||bc[hy])made=4;
+  else made=5;
+  if(L>=5)return[made,-1];
+  if(made===0)return[made,5];
+  /* flush draws: a suit one short (or, on the flop, two short) with a hole card in it */
+  const sc=new Int8Array(4);for(const c of [x,y,...board])sc[c&3]++;
+  const inHole=s=>(x&3)===s||(y&3)===s;
+  let fd=false,bdf=false;for(let s=0;s<4;s++){if(sc[s]===4&&inHole(s))fd=true;if(sc[s]===3&&inHole(s))bdf=true;}
+  /* straight draws: the ranks that would complete a straight the board alone would not */
+  const m=bm|1<<hx|1<<hy,fills=extra=>STRAIGHT[m|extra]>=0&&STRAIGHT[bm|extra]<0;
+  let outs=0;for(let r=0;r<13;r++)if(!(m>>r&1)&&fills(1<<r))outs++;
+  let bds=false;
+  if(L===3&&!outs)for(let r=0;r<13&&!bds;r++)for(let t=r+1;t<13;t++)if(!(m>>r&1)&&!(m>>t&1)&&fills(1<<r|1<<t)){bds=true;break;}
+  const draw=fd&&outs?0:fd?1:outs>=2?2:outs?3:L===3&&(bdf||bds)?4:5;
+  return[made,draw];
+}
 /* "ワンペア QQ (A 9 5)" from an eval7 strength */
 const HCAT=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
 function handLabel(v){const t=Math.floor(v/CAT),r=v%CAT,nb=k=>RANKS[(r>>(4*k))&15],rep=(x,n)=>x.repeat(n),ks=(a,b)=>{const o=[];for(let k=a;k>=b;k--)o.push(nb(k));return o.join(' ');};

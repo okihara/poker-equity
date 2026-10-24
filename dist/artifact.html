@@ -323,14 +323,17 @@ th:first-child,td:first-child{text-align:left}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
-.bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em;gap:3px 8px;align-items:center;
+.bkbtns{display:inline-flex;margin-bottom:6px}
+.bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em 3.2em;gap:3px 8px;align-items:center;
   font-family:var(--ff-num);font-size:10.5px;color:var(--ink-2)}
 /* one row per band, strongest first: the band, a bar as long as its share of the range, the share */
 .bkn{display:flex;align-items:center;gap:5px;white-space:nowrap}
 .bkn i{width:8px;height:8px;border-radius:2px;display:block}
 .bkt{height:10px;border-radius:3px;background:var(--surface-3);overflow:hidden}
 .bkt i{display:block;height:100%;transition:width .25s ease}
-.bkp{text-align:right;font-variant-numeric:tabular-nums}
+.bkp,.bkq{text-align:right;font-variant-numeric:tabular-nums}
+.bkq{color:var(--ink-3)}
+.bkh{color:var(--ink-3);font-size:9.5px;text-align:right}
 .bk .b0{background:color-mix(in oklab,var(--side) 14%,var(--surface-3))}
 .bk .b1{background:color-mix(in oklab,var(--side) 28%,var(--surface-3))}
 .bk .b2{background:color-mix(in oklab,var(--side) 43%,var(--surface-3))}
@@ -419,7 +422,11 @@ th:first-child,td:first-child{text-align:left}
       <!-- the combo count sits by the title, not in the button row below, so a
            wrapping row cannot push it onto a line of its own in one panel only -->
       <div class="rhead"><h2 class="rtitle">相手のレンジ</h2><span class="chip rangeInfo">–</span></div>
-      <!-- equity buckets: the share of this range in each band of its own equity; app.js fills it -->
+      <!-- buckets: the share of this range in each band of its own equity, or in each
+           made-hand or draw class with its average equity; app.js fills it -->
+      <div class="segbtns bkbtns" role="group" aria-label="バケツの分け方">
+        <button data-v="eq" aria-pressed="true">エクイティ</button><button data-v="made" aria-pressed="false">役</button><button data-v="draw" aria-pressed="false">ドロー</button>
+      </div>
       <div class="bk"></div>
       <div class="reditor">
         <div class="ctl">
@@ -544,7 +551,9 @@ th:first-child,td:first-child{text-align:left}
       <li>レンジのマスとハンド別エクイティの色は、常にヒーローから見たエクイティです。3人モードだけは、各プレイヤーのマスがそのプレイヤー自身のエクイティで、色の中央は均等割りの 33.3% です。</li>
       <li>ハンド別エクイティのマスにポインタを合わせると、コンボ数とウェイトの内訳が出ます。</li>
       <li>エクイティチャートは、各レンジのコンボをエクイティの低い順に並べた線です。線が上にあるほどレンジ全体が強く、平らな区間は同じくらいの強さのハンドがまとまっているところです。ポインタを合わせると、その位置のハンドとエクイティが出ます。</li>
-      <li>各レンジの上の7本の棒はエクイティバケツです（強い帯が上）。そのレンジのコンボを、そのプレイヤー自身のエクイティで7つの帯（20・35・45・55・65・80%区切り。3人モードは均等割りの 33.3% を真ん中の帯に入れて 10・20・30・40・50・70%区切り）に分け、レンジの何%が各帯にあるかを示します。ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
+      <li>各レンジの上の棒はバケツです。「エクイティ」は、そのレンジのコンボをそのプレイヤー自身のエクイティで7つの帯（20・35・45・55・65・80%区切り。3人モードは均等割りの 33.3% を真ん中の帯に入れて 10・20・30・40・50・70%区切り）に分けたもの。強い帯が上で、レンジの何%が各帯にあるかを示します。</li>
+      <li>ボードが3枚以上あると「役」「ドロー」に切り替えられます（3つのパネルが一緒に切り替わります）。役はボードに対しての強さ（ボードのペアは自分のペアに数えない）、ドローはコンボドロー → フラッシュドロー → 両面 → ガットショット → バックドア の順に優先して1つに数えます。バックドアはフロップだけ、リバーではドローは選べません。右の EQ はその分類の平均エクイティです。</li>
+      <li>どのバケツも、ブロッカーで対戦の少ないコンボほど軽く数えます。</li>
       <li>レンジ vs レンジでは、ハンド別エクイティの見出し横で表示するレンジを切り替えます。</li>
     </ul>
   </div>
@@ -859,6 +868,39 @@ function madeHands(raw,board,used){
   for(let i=0;i<R.n;i++){const v=evalN([R.c0[i],R.c1[i],...board]);let e=g.get(v);
     if(!e){e={v,w:0,combos:[]};g.set(v,e);}e.w+=R.w[i];e.combos.push([R.c0[i],R.c1[i],R.w[i]]);}
   return [...g.values()].sort((x,y)=>y.v-x.v);}
+/* What a combo has on this board, judged against the board rather than by the
+   hand category alone (a pair on the board is not the combo's pair). Returns
+   [made, draw] as indexes into MADE and DRAW, strongest first; each combo
+   lands in exactly one of each, the first that fits. draw is -1 on the river.
+   A combo that has made a straight or better draws to nothing. */
+const MADE=['ストレート以上','セット・ツーペア','オーバーペア・トップペア','ミドルペア','弱いペア','ハイカード'];
+const DRAW=['コンボドロー','フラッシュドロー','両面（ダブルガット含む）','ガットショット','バックドアのみ','ドローなし'];
+function handClass(x,y,board){
+  const L=board.length,hv=evalN([x,y,...board]),bv=evalN(board),hx=x>>2,hy=y>>2;
+  let bm=0;for(const c of board)bm|=1<<(c>>2);
+  const br=[];for(let r=12;r>=0;r--)if(bm>>r&1)br.push(r);
+  const bc=new Int8Array(13);for(const c of board)bc[c>>2]++;
+  let made;
+  if(Math.floor(hv/CAT)>=4&&hv!==bv)made=0;
+  else if(hx===hy?bc[hx]>0:bc[hx]>1||bc[hy]>1||bc[hx]&&bc[hy])made=1;
+  else if(hx===hy?hx>br[0]:hx===br[0]||hy===br[0])made=2;
+  else if(hx===hy?hx>br[1]:hx===br[1]||hy===br[1])made=3;
+  else if(hx===hy||bc[hx]||bc[hy])made=4;
+  else made=5;
+  if(L>=5)return[made,-1];
+  if(made===0)return[made,5];
+  /* flush draws: a suit one short (or, on the flop, two short) with a hole card in it */
+  const sc=new Int8Array(4);for(const c of [x,y,...board])sc[c&3]++;
+  const inHole=s=>(x&3)===s||(y&3)===s;
+  let fd=false,bdf=false;for(let s=0;s<4;s++){if(sc[s]===4&&inHole(s))fd=true;if(sc[s]===3&&inHole(s))bdf=true;}
+  /* straight draws: the ranks that would complete a straight the board alone would not */
+  const m=bm|1<<hx|1<<hy,fills=extra=>STRAIGHT[m|extra]>=0&&STRAIGHT[bm|extra]<0;
+  let outs=0;for(let r=0;r<13;r++)if(!(m>>r&1)&&fills(1<<r))outs++;
+  let bds=false;
+  if(L===3&&!outs)for(let r=0;r<13&&!bds;r++)for(let t=r+1;t<13;t++)if(!(m>>r&1)&&!(m>>t&1)&&fills(1<<r|1<<t)){bds=true;break;}
+  const draw=fd&&outs?0:fd?1:outs>=2?2:outs?3:L===3&&(bdf||bds)?4:5;
+  return[made,draw];
+}
 /* "ワンペア QQ (A 9 5)" from an eval7 strength */
 const HCAT=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
 function handLabel(v){const t=Math.floor(v/CAT),r=v%CAT,nb=k=>RANKS[(r>>(4*k))&15],rep=(x,n)=>x.repeat(n),ks=(a,b)=>{const o=[];for(let k=a;k>=b;k--)o.push(nb(k));return o.join(' ');};
@@ -1060,7 +1102,7 @@ function buildPanels(){
   for(const el of [h,v,v2]){
     const k=+el.dataset.k,q=c=>el.querySelector('.'+c),nm=['ヒーロー','相手','相手2'][k];
     const P={k,el,w:ranges[k],eq:Array.from({length:13},()=>new Float64Array(13).fill(-1)),paintW:1,
-      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle'),bk:q('bk')};
+      grid:q('rgrid'),slider:q('topSlider'),out:q('topOut'),text:q('rtext'),info:q('rangeInfo'),title:q('rtitle'),bk:q('bk'),bkb:q('bkbtns')};
     P.title.id='h-range'+k;el.setAttribute('aria-labelledby',P.title.id);
     P.grid.setAttribute('aria-label',nm+'のレンジグリッド');P.text.setAttribute('aria-label',nm+'のレンジのテキスト表記');
     P.slider.setAttribute('aria-label',nm+'のレンジを上位何パーセントで選ぶか');
@@ -1330,22 +1372,36 @@ function showResult(r){
   $('chips').innerHTML=chips.map(c=>'<span class="chip'+(c[1]?' acc':'')+'">'+c[0]+'</span>').join('');
   drawHeat(r);
 }
-/* Equity buckets: how much of each range sits in each of seven bands of its
-   own player's equity. The middle band straddles the fair share -- 50% heads-up,
-   1/3 three ways -- and the bands narrow towards it, where the close calls are.
-   Combos count by share, so blockers weigh in. */
+/* Buckets, by bkView. 'eq': how much of each range sits in each of seven bands
+   of its own player's equity; the middle band straddles the fair share -- 50%
+   heads-up, 1/3 three ways -- and the bands narrow towards it, where the close
+   calls are. 'made' and 'draw': the range split by handClass, with each class's
+   average equity; only with a flop or later (no draws on the river). Combos
+   count by share, so blockers weigh in. Strongest on top throughout. */
+let bkView='eq';
 const bkCut=()=>mode==='multi'?[10,20,30,40,50,70]:[20,35,45,55,65,80];
 function drawBuckets(r){
-  const c=bkCut(),cut=c.map(x=>x/100),nm=[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%');
+  const B=live(board),views=B.length<3?['eq']:B.length<5?['eq','made','draw']:['eq','made'],v=views.includes(bkView)?bkView:'eq';
+  const c=bkCut(),cut=c.map(x=>x/100);
+  /* names strongest first, and each combo's row in that order */
+  const nm=v==='made'?MADE:v==='draw'?DRAW:[...c,0].map((x,i)=>!i?'〜'+x+'%':i===c.length?c[i-1]+'%〜':c[i-1]+'〜'+x+'%').reverse();
+  const row=v==='eq'?pc=>{let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;return c.length-i;}:pc=>handClass(pc.a,pc.b,B)[v==='made'?0:1];
+  /* seven shades, the strongest row darkest */
+  const shade=j=>'b'+Math.round((nm.length-1-j)*6/(nm.length-1));
   for(const P of RP){
     /* a lone hand has nothing to bucket; the second villain plays only three ways */
-    P.bk.hidden=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;if(P.bk.hidden)continue;
-    const b=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
-    for(const pc of pcs){let i=0;while(i<cut.length&&pc.eq>=cut[i])i++;b[i]+=pc.share;}
-    /* strongest band on top; with no result the rows stay, empty, so the panel keeps its height */
-    P.bk.innerHTML=[...b.keys()].reverse().map(i=>'<span class="bkn"><i class="b'+i+'"></i>'+nm[i]+'</span>'+
-      '<span class="bkt"><i class="b'+i+'" style="width:'+(b[i]*100)+'%"></i></span><span class="bkp">'+(r?(b[i]*100).toFixed(1)+'%':'–')+'</span>').join('');}
+    const off=mode==='hand'&&!P.k||mode!=='multi'&&P.k===2;P.bk.hidden=off;P.bkb.hidden=off||views.length<2;if(off)continue;
+    for(const b of P.bkb.children){b.hidden=!views.includes(b.dataset.v);b.setAttribute('aria-pressed',b.dataset.v===v?'true':'false');}
+    const s=nm.map(()=>0),e=nm.map(()=>0),pcs=!r?[]:r.players?r.players[P.k].perCombo:P.k?r.opp.perCombo:r.perCombo;
+    for(const pc of pcs){const j=row(pc);s[j]+=pc.share;e[j]+=pc.share*pc.eq;}
+    /* with no result the rows stay, empty, so the panel keeps its height */
+    P.bk.innerHTML=(v==='eq'?'':'<span></span><span></span><span class="bkh">割合</span><span class="bkh">EQ</span>')+
+      nm.map((n,j)=>'<span class="bkn"><i class="'+shade(j)+'"></i>'+n+'</span>'+
+      '<span class="bkt"><i class="'+shade(j)+'" style="width:'+(s[j]*100)+'%"></i></span><span class="bkp">'+(r?(s[j]*100).toFixed(1)+'%':'–')+'</span>'+
+      '<span class="bkq">'+(v==='eq'||!r?'':s[j]>0?(e[j]/s[j]*100).toFixed(1)+'%':'–')+'</span>').join('');}
 }
+document.addEventListener('click',e=>{const b=e.target.closest('.bkbtns button');if(!b)return;
+  bkView=b.dataset.v;save();drawBuckets(lastRes);});
 /* Equity chart: each player's combos sorted by their own equity, as a step
    line whose steps are as wide as the combo's share. chart keeps the sorted
    combos and where each step ends, for the hover readout. */
@@ -1453,7 +1509,7 @@ function drawLegend(){
 }
 
 /* ---- persistence ---- */
-function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
+function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,bk:bkView,
   ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
@@ -1461,7 +1517,7 @@ function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<3;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
-  mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;
+  mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;if(s.bk==='made'||s.bk==='draw')bkView=s.bk;
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
   return true;}catch(e){return false;}}
