@@ -48,7 +48,13 @@ const inkOn=c=>lum(c)>0.32?'#0e1620':'#ffffff';
 const dead=[];
 let hero=[], board=[], activeSlot=null; // the slot the open picker fills
 let mode='hand', hmSide=1; // hmSide: the range the heatmap shows
-const newRange=()=>Array.from({length:13},()=>new Float64Array(13));
+/* A range is 13x13 cell weights plus cut, the combos (ckey) taken out one by
+   one, which a cell weight cannot say: the call filter keeps A♥K♥ and drops
+   the other AKs. Painting a cell, a preset or text puts its combos back. */
+const newRange=()=>{const w=Array.from({length:13},()=>new Float64Array(13));w.cut=new Set();return w;};
+const ckey=(a,b)=>a<b?a*52+b:b*52+a;
+/* combos of cell i,j still in range w */
+function keptIn(w,i,j){if(!w.cut.size)return comboCount(CELLN[i][j]);let n=0;for(const [a,b] of cellCombos(i,j))if(!w.cut.has(ckey(a,b)))n++;return n;}
 const ranges=[newRange(),newRange(),newRange()];
 const PN=['ヒーロー','相手1','相手2']; // player names in 3-player mode
 const wideMq=window.matchMedia('(min-width:1100px)'); // where the 3-player button shows
@@ -192,9 +198,11 @@ function buildHeatGrid(){
 
 /* ---- range painting ---- */
 let drag=null,dragErase=false; // drag: the panel being painted
-function setCell(P,i,j,w){if(P.w[i][j]!==w){P.w[i][j]=w;paintCell(P,i,j);}}
+function setCell(P,i,j,w){let un=false;if(P.w.cut.size)for(const [a,b] of cellCombos(i,j))un=P.w.cut.delete(ckey(a,b))||un;
+  if(P.w[i][j]!==w||un){P.w[i][j]=w;paintCell(P,i,j);}}
 function paintCell(P,i,j){
-  const el=P.grid.children[i*13+j],w=P.w[i][j];
+  /* a cell the call filter thinned shows as the weight of what is left */
+  const el=P.grid.children[i*13+j],n=comboCount(CELLN[i][j]),k=keptIn(P.w,i,j),w=P.w[i][j]*k/n;
   /* Colour carries equity (the heatmap's scale, or the side's own colour before
      a result exists) at full strength; weight is the filled height from the
      bottom, so a partial weight never turns into a washed-out tint. */
@@ -202,7 +210,7 @@ function paintCell(P,i,j){
     el.classList.add('on');
     el.style.background=w<1?'linear-gradient(to top,'+toCss(c)+' '+h+',var(--surface-2) '+h+')':toCss(c);
     el.style.color=w>=0.5?inkOn(c):'var(--ink)';
-    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(e>=0?' / '+(mode==='multi'?PN[P.k]:'ヒーロー')+' '+(e*100).toFixed(1)+'%':'');}
+    el.textContent=CELLN[i][j];el.title=CELLN[i][j]+' — ウェイト '+Math.round(w*100)+'%'+(k<n?'（絞り込みで '+k+'/'+n+' コンボ）':'')+(e>=0?' / '+(mode==='multi'?PN[P.k]:'ヒーロー')+' '+(e*100).toFixed(1)+'%':'');}
   else{el.classList.remove('on');el.style.background='';el.style.color='';el.title=CELLN[i][j];}
 }
 function repaintGrid(P){for(let i=0;i<13;i++)for(let j=0;j<13;j++)paintCell(P,i,j);}
@@ -237,17 +245,28 @@ function wirePanel(P){
     const b=document.createElement('button');b.type='button';b.className='tbtn';b.textContent=label;
     b.addEventListener('click',()=>top(pct));q('presets').appendChild(b);
   }
-  const fill=x=>{for(const r of P.w)r.fill(x);repaintAll(P);syncText(P);schedule();};
+  const fill=x=>{for(const r of P.w)r.fill(x);P.w.cut.clear();repaintAll(P);syncText(P);schedule();};
   q('clrRange').addEventListener('click',()=>fill(0));
   q('allRange').addEventListener('click',()=>fill(1));
   q('applyText').addEventListener('click',()=>{applyText(P);syncText(P);});
+  q('callCut').addEventListener('click',()=>callCut(P));
+  q('uncut').addEventListener('click',()=>{P.w.cut.clear();repaintAll(P);schedule();});
 }
 
 /* ---- range helpers ---- */
-function totalCombos(w){let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)t+=w[i][j]*comboCount(CELLN[i][j]);return t;}
+function totalCombos(w){let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)if(w[i][j]>0)t+=w[i][j]*keptIn(w,i,j);return t;}
+/* Thin P's range to what can call on the board (engine canCall). Combos the
+   board blocks stay: the engine drops them anyway, and they come back if the
+   board changes. */
+function callCut(P){
+  const B=live(board);if(B.length<3)return;
+  for(let i=0;i<13;i++)for(let j=0;j<13;j++)if(P.w[i][j]>0)for(const [a,b] of cellCombos(i,j))
+    if(!B.includes(a)&&!B.includes(b)&&!canCall(a,b,B))P.w.cut.add(ckey(a,b));
+  repaintAll(P);schedule();
+}
 function selectTopPct(P,p){
   const target=1326*p/100;let acc=0;
-  for(const r of P.w)r.fill(0);
+  for(const r of P.w)r.fill(0);P.w.cut.clear();
   for(const nm of RANK_ORDER){
     const n=comboCount(nm);if(acc+n>target+1e-9)break;
     const [i,j]=NAME2IJ[nm];P.w[i][j]=1;acc+=n;
@@ -256,7 +275,8 @@ function selectTopPct(P,p){
 }
 function updateRangeInfo(P){
   const t=totalCombos(P.w);
-  P.info.textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)';
+  P.info.textContent=t.toFixed(t%1?1:0)+' コンボ / 1326 ('+(t/13.26).toFixed(1)+'%)'+(P.w.cut.size?' 絞り込み中':'');
+  P.el.querySelector('.uncut').hidden=!P.w.cut.size;
 }
 function rangeText(w){
   const parts=[];
@@ -272,7 +292,7 @@ function applyText(P){
 }
 /* Overwrites w with the range txt spells; returns how many tokens it could not read. */
 function parseRange(txt,w){
-  for(const r of w)r.fill(0);
+  for(const r of w)r.fill(0);w.cut.clear();
   let bad=0;
   for(let tok of txt.split(/[,\s]+/)){
     tok=tok.trim();if(!tok)continue;
@@ -296,6 +316,7 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
+  for(const P of RP)P.el.querySelector('.callCut').disabled=live(board).length<3;
   const faces=a=>a.map(c=>'<span class="'+faceCls(c).trim()+'">'+face(c)+'</span>').join(''),B=live(board),H=mode==='hand'?live(hero):[];
   $('stickHero').innerHTML=faces(H);$('stickHero').hidden=!H.length;
   $('stickBoard').innerHTML=B.length?faces(B):'<span class="stickpf">プリフロップ</span>';
@@ -358,7 +379,7 @@ function clearResult(msg){
   clearHeat();
 }
 function rawRange(w){const raw=[];
-  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const x=w[i][j];if(x>0)for(const c of cellCombos(i,j))raw.push([c[0],c[1],x]);}
+  for(let i=0;i<13;i++)for(let j=0;j<13;j++){const x=w[i][j];if(x>0)for(const c of cellCombos(i,j))if(!w.cut.has(ckey(c[0],c[1])))raw.push([c[0],c[1],x]);}
   return raw;}
 async function run(){
   const my=++token;
@@ -426,7 +447,7 @@ function showResult(r){
   $('matchup').innerHTML=(mode==='hand'?handStr(live(hero)):'ヒーローのレンジ')+vs+(mode==='hand'?'レンジ':'相手のレンジ')+
     (live(board).length?' <span style="color:var(--ink-3)">/ ボード</span> '+handStr(live(board)):' <span style="color:var(--ink-3)">（プリフロップ）</span>')+
     (live(dead).length?' <span style="color:var(--ink-3)">/ デッド</span> '+handStr(live(dead)):'');
-  const combos=w=>{let t=0;for(let i=0;i<13;i++)for(let j=0;j<13;j++)t+=w[i][j]*comboCount(CELLN[i][j]);return t.toFixed(t%1?1:0);};
+  const combos=w=>{const t=totalCombos(w);return t.toFixed(t%1?1:0);};
   const chips=[];
   if(mode==='range')chips.push(['ヒーロー '+combos(ranges[0])+'コンボ → '+r.nCombos,false]);
   chips.push([(mode==='range'?'相手 ':'レンジ ')+combos(ranges[1])+'コンボ → '+r.nCombosOpp+'（ブロッカー除外後）',false]);
@@ -576,7 +597,8 @@ const FSF=[['suits','スーツ',['レインボー','ツートーン','モノト�
 const fsSel={suits:-1,pair:-1,conn:-1,hi:-1,mid:-1,lo:-1};
 let fsRes=null,fsSig='',fsW=null,fsId=0;
 /* what the result depends on: the mode and the ranges in play */
-const fsSigNow=()=>mode+'|'+(mode==='multi'?ranges:ranges.slice(0,2)).map(rangeText).join('|');
+const fsRanges=()=>mode==='multi'?ranges:ranges.slice(0,2);
+const fsSigNow=()=>mode+'|'+fsRanges().map(w=>rangeText(w)+'/'+[...w.cut].join(',')).join('|');
 function buildFsFilters(){
   $('fsFilt').innerHTML=FSF.map(([k,t,labels,vals])=>'<div><div class="lbl">'+t+'</div><div class="segbtns" data-f="'+k+'" role="group" aria-label="'+t+'">'+
     '<button data-v="-1" aria-pressed="true">すべて</button>'+labels.map((l,i)=>'<button data-v="'+(vals?vals[i]:i)+'" aria-pressed="false">'+l+'</button>').join('')+'</div></div>').join('');
@@ -584,12 +606,13 @@ function buildFsFilters(){
     fsSel[g.dataset.f]=+b.dataset.v;pressed(g,b);drawFlopSet();});
 }
 function fsState(){
-  const ok=mode!=='hand';$('fsRun').disabled=!ok;
-  $('fsMsg').textContent=!ok?'レンジ vs レンジと3人モードで使えます。':fsRes&&fsSig!==fsSigNow()?'レンジが変わりました。もう一度計算してください。':'';
+  /* the flop classes stand for every suit alike, which a thinned range does not */
+  const cut=fsRanges().some(w=>w.cut.size),ok=mode!=='hand'&&!cut;$('fsRun').disabled=!ok;
+  $('fsMsg').textContent=mode==='hand'?'レンジ vs レンジと3人モードで使えます。':cut?'コールできるハンドに絞ったレンジがあると使えません。':fsRes&&fsSig!==fsSigNow()?'レンジが変わりました。もう一度計算してください。':'';
   $('fsBars').classList.toggle('stale',!!fsRes&&fsSig!==fsSigNow());
 }
 function runFlopSet(){
-  if(mode==='hand')return;
+  if($('fsRun').disabled)return;
   const id=++fsId,sig=fsSigNow(),rs=(mode==='multi'?ranges:ranges.slice(0,2)).map(rawRange),e=rs.findIndex(r=>!r.length);
   if(e>=0){$('fsMsg').textContent=(mode==='multi'?PN[e]:['ヒーロー','相手'][e])+'のレンジを選んでください。';return;}
   $('fsProg').classList.add('on');$('fsProgi').style.width='0%';$('fsRun').textContent='計算中…';
@@ -664,13 +687,14 @@ $('fsBars').addEventListener('pointerleave',()=>tip.classList.remove('on','multi
 
 /* ---- persistence ---- */
 function save(){try{localStorage.setItem('eqtool',JSON.stringify({hero,board,mode,hm:hmSide,
-  ranges:ranges.map(w=>w.map(r=>Array.from(r))),precision}));}catch(e){}}
+  ranges:ranges.map(w=>w.map(r=>Array.from(r))),cuts:ranges.map(w=>[...w.cut]),precision}));}catch(e){}}
 function load(){try{const s=JSON.parse(localStorage.getItem('eqtool'));
   if(!s||!Array.isArray(s.hero))return false;
   hero=s.hero.slice(0,2);board=(s.board||[]).slice(0,5);
   /* before range vs range, a save held the one villain range as `cells` */
   const saved=s.ranges||[null,s.cells];
   for(let k=0;k<3;k++)if(saved[k])for(let i=0;i<13;i++)for(let j=0;j<13;j++)ranges[k][i][j]=saved[k][i][j]||0;
+  if(Array.isArray(s.cuts))for(let k=0;k<3;k++)for(const c of s.cuts[k]||[])if(Number.isInteger(c))ranges[k].cut.add(c);
   mode=okMode(s.mode);if(s.hm===0||s.hm===2)hmSide=s.hm;
   /* precision used to be a Monte Carlo sample count for hand vs range */
   if(s.precision===2000||s.precision===10000)precision=s.precision;
@@ -681,7 +705,7 @@ const spotDlg=$('spotdlg');
 function loadSpots(){try{const s=JSON.parse(localStorage.getItem('eqspots'));return Array.isArray(s)?s.filter(x=>x&&typeof x.name==='string'):[];}catch(e){return [];}}
 function storeSpots(L){try{localStorage.setItem('eqspots',JSON.stringify(L));return true;}catch(e){return false;}}
 const cardStr=a=>live(a).map(c=>RANKS[c>>2]+SYM[c&3]).join('');
-function snapshot(){return {mode,hero:live(hero),board:live(board),r:ranges.map(rangeText),t:Date.now()};}
+function snapshot(){return {mode,hero:live(hero),board:live(board),r:ranges.map(rangeText),x:ranges.map(w=>[...w.cut]),t:Date.now()};}
 /* what the spot is, as the default name and the line under each saved one */
 function spotDesc(s){
   const pct=t=>{const w=newRange();parseRange(t||'',w);return (totalCombos(w)/13.26).toFixed(1)+'%';};
@@ -693,7 +717,8 @@ function applySpot(s){
   const seen=new Set(),ok=c=>Number.isInteger(c)&&c>=0&&c<52&&!seen.has(c)&&seen.add(c);
   board=(s.board||[]).filter(ok).slice(0,5);hero=(s.hero||[]).filter(ok).slice(0,2);
   /* a spot saved before 3-player mode has two ranges; the third stays as it is */
-  for(let k=0;k<3;k++){const t=(s.r||[])[k];if(k<2||typeof t==='string')parseRange(t||'',ranges[k]);}
+  for(let k=0;k<3;k++){const t=(s.r||[])[k];if(k<2||typeof t==='string')parseRange(t||'',ranges[k]);
+    for(const c of (s.x||[])[k]||[])if(Number.isInteger(c))ranges[k].cut.add(c);}
   spotDlg.close();setMode(okMode(s.mode));save();run();
 }
 function drawSpots(){

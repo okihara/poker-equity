@@ -70,3 +70,15 @@ test('every combo lands in exactly one made-hand and one draw class', () => {
     assert.ok(m >= 0 && m < E.MADE.length && d >= 0 && d < E.DRAW.length);
   }
 });
+
+test('what can call: a pair of its own or a real draw', () => {
+  const call = (hand, board) => { const [x, y] = parseCards(hand); return E.canCall(x, y, parseCards(board)); };
+  assert.strictEqual(call('3s3c', 'Ks 9h 4d'), true, 'an underpair is a pair');
+  assert.strictEqual(call('Ac2d', 'Ks 9h 4d'), false, 'ace high, no draw');
+  assert.strictEqual(call('7h2c', 'Ks Kd 4c'), false, 'the board pair is not its own');
+  assert.strictEqual(call('5c4c', 'Ks 8h 7d'), true, 'a gutshot');
+  assert.strictEqual(call('Qh2h', 'Ks 9h 4h'), true, 'a flush draw');
+  assert.strictEqual(call('KcQc', 'Ks 9h 4d'), true, 'top pair');
+  assert.strictEqual(call('AhJh', 'Ks 9h 4d'), false, 'a backdoor alone does not call');
+  assert.strictEqual(call('Qh2h', 'Ks 9h 4h 3c 7d'), false, 'no draws on the river');
+});

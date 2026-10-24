@@ -290,6 +290,10 @@ function handClass(x,y,board){
   const draw=fd&&outs?0:nut?1:fd?2:outs>=2?3:outs?4:L===3&&(bdf||bds)?5:6;
   return[made,draw];
 }
+/* Whether a combo can call on this board: a pair or better of its own (a
+   board pair is not its pair), or a draw better than a backdoor. On the river
+   only the pair counts. */
+function canCall(x,y,board){const [m,d]=handClass(x,y,board);return m<MADE.length-1||d>=0&&d<DRAW.length-2;}
 /* "ワンペア QQ (A 9 5)" from an eval7 strength */
 const HCAT=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート','フラッシュ','フルハウス','フォーカード','ストレートフラッシュ'];
 function handLabel(v){const t=Math.floor(v/CAT),r=v%CAT,nb=k=>RANKS[(r>>(4*k))&15],rep=(x,n)=>x.repeat(n),ks=(a,b)=>{const o=[];for(let k=a;k>=b;k--)o.push(nb(k));return o.join(' ');};
