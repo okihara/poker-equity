@@ -631,7 +631,7 @@ function drawMini(){
   fsShown.forEach((f,i)=>{if(!f.eq)return;let y=h;
     /* a hair wider than its slot, so neighbouring columns leave no seams */
     f.eq.forEach((x,k)=>{const d=x*h;g.fillStyle=col[k];g.fillRect(i*bw,y-d,bw+0.5,d);y-=d;});});
-  /* labels at each high card's first flop; ones that would crowd the last merge into it ("2345") */
+  /* labels at each high card's first flop; ones that would crowd the last merge into it ("5432") */
   const lab=[];let last=-99;
   fsShown.forEach((f,i)=>{if(i&&f.c[0]>>2===fsShown[i-1].c[0]>>2)return;const x=i*bw,r=RANKS[f.c[0]>>2];
     if(lab.length&&x-last<14)lab[lab.length-1][1]+=r;else{lab.push([x,r]);last=x;}});

@@ -187,7 +187,8 @@ async function computeMultiEquity(raws,board,dead,opts){
    its count n and a representative c (cards high to low, suits numbered in
    order of first use, so the representative is the same whichever member
    named it). Ranges built from the 13x13 grid treat suits alike, so one flop
-   per class stands for them all. Sorted by high, middle, low rank, then suits. */
+   per class stands for them all. Sorted by high, middle, low rank, aces first,
+   then suits. */
 let FLOPS=null;
 function flopClasses(){
   if(FLOPS)return FLOPS;
@@ -201,7 +202,7 @@ function flopClasses(){
       map.fill(-1);ns=0;const r=q.map(x=>{const s=x&3;if(map[s]<0)map[s]=ns++;return(x&~3)|map[s];});
       const k=r[0]*2704+r[1]*52+r[2];if(!best||k<best.k)best={k,r};}
     const e=m.get(best.k);if(e)e.n++;else m.set(best.k,{c:best.r,n:1});}
-  FLOPS=[...m.values()].sort((x,y)=>(x.c[0]>>2)-(y.c[0]>>2)||(x.c[1]>>2)-(y.c[1]>>2)||(x.c[2]>>2)-(y.c[2]>>2)||
+  FLOPS=[...m.values()].sort((x,y)=>(y.c[0]>>2)-(x.c[0]>>2)||(y.c[1]>>2)-(x.c[1]>>2)||(y.c[2]>>2)-(x.c[2]>>2)||
     (x.c[0]&3)-(y.c[0]&3)||(x.c[1]&3)-(y.c[1]&3)||(x.c[2]&3)-(y.c[2]&3));
   return FLOPS;
 }

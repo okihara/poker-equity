@@ -20,11 +20,11 @@ test('the flop classes cover every flop once, 1755 classes up to suits', () => {
   }
 });
 
-test('flops are sorted by high, middle, then low rank', () => {
+test('flops are sorted by high, middle, then low rank, aces first', () => {
   const F = E.flopClasses(), key = (f) => (f.c[0] >> 2) * 169 + (f.c[1] >> 2) * 13 + (f.c[2] >> 2);
-  for (let i = 1; i < F.length; i++) assert.ok(key(F[i - 1]) <= key(F[i]));
-  assert.deepStrictEqual(F[0].c.map((c) => c >> 2), [0, 0, 0], '222 first');
-  assert.deepStrictEqual(F[F.length - 1].c.map((c) => c >> 2), [12, 12, 12], 'AAA last');
+  for (let i = 1; i < F.length; i++) assert.ok(key(F[i - 1]) >= key(F[i]));
+  assert.deepStrictEqual(F[0].c.map((c) => c >> 2), [12, 12, 12], 'AAA first');
+  assert.deepStrictEqual(F[F.length - 1].c.map((c) => c >> 2), [0, 0, 0], '222 last');
 });
 
 test('flop textures', () => {
