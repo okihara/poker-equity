@@ -102,7 +102,7 @@ body.multi #resPanel{position:sticky;top:0;z-index:20}
 
 /* panels */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;box-shadow:var(--shadow)}
-.seclabel,.panel>h2{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
+.seclabel,.panel>h2,.rhead>h2{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px}
 .cols{display:grid;grid-template-columns:1fr;gap:6px}
 @media(min-width:960px){.cols{grid-template-columns:minmax(0,0.92fr) minmax(0,1.08fr);align-items:start}}
 
@@ -293,6 +293,8 @@ th:first-child,td:first-child{text-align:left}
 #mhtbl tr.me td{background:var(--hero-soft);color:var(--hero);font-weight:600}
 .foot{font-size:11px;color:var(--ink-3);line-height:1.7}
 .warn{color:var(--pole-lo);font-size:12px}
+.rhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.rhead>h2{margin-bottom:0}
 .rpanel[data-k="0"] .rtitle{color:var(--hero)}
 .rpanel[data-k="1"] .rtitle{color:var(--opp)}
 .rpanel[data-k="2"] .rtitle{color:var(--opp2)}

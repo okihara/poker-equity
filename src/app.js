@@ -587,7 +587,7 @@ function setMode(m){
   pressed($('mbtns'),$('mbtns').querySelector('[data-m="'+m+'"]'));
   /* the hero panel holds either the two-card hand or the range editor */
   $('heroGrp').hidden=m!=='hand';RP[0].el.querySelector('.reditor').hidden=m==='hand';
-  $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');
+  $('hmbtns').hidden=m==='hand';$('cols').classList.toggle('rvr',m==='range');RP[0].info.hidden=m==='hand';
   const mu=m==='multi',hb=$('hmbtns').children;
   /* 3-player mode spreads over the whole width, three range panels abreast,
      with the result band pinned to the top in place of the sticky bar */

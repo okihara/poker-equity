@@ -71,7 +71,9 @@
       <div class="slotrow" id="heroSlots"></div>
     </div>
     <section class="panel rpanel" id="rp1" data-k="1">
-      <h2 class="rtitle">相手のレンジ</h2>
+      <!-- the combo count sits by the title, not in the button row below, so a
+           wrapping row cannot push it onto a line of its own in one panel only -->
+      <div class="rhead"><h2 class="rtitle">相手のレンジ</h2><span class="chip rangeInfo">–</span></div>
       <div class="reditor">
         <div class="ctl">
           <div class="ctl-block">
@@ -87,7 +89,6 @@
         <div class="rowend">
           <button class="tbtn clrRange">レンジをクリア</button>
           <button class="tbtn allRange">全ハンド (100%)</button>
-          <span class="chip rangeInfo">–</span>
         </div>
         <textarea class="rtext" spellcheck="false" aria-label="レンジのテキスト表記"></textarea>
         <div class="rowend">
