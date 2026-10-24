@@ -317,7 +317,6 @@ th:first-child,td:first-child{text-align:left}
 
 /* equity buckets: the player's colour from faint (weakest band) to full */
 .rpanel[data-k="0"]{--side:var(--hero)}.rpanel[data-k="1"]{--side:var(--opp)}.rpanel[data-k="2"]{--side:var(--opp2)}
-.bkbtns{display:inline-flex;margin-bottom:6px}
 .bk{margin-bottom:8px;display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em 3.2em;gap:3px 8px;align-items:center;
   font-family:var(--ff-num);font-size:10.5px;color:var(--ink-2)}
 /* one row per band, strongest first: the band, a bar as long as its share of the range, the share */
@@ -328,6 +327,8 @@ th:first-child,td:first-child{text-align:left}
 .bkp,.bkq{text-align:right;font-variant-numeric:tabular-nums}
 .bkq{color:var(--ink-3)}
 .bkh{color:var(--ink-3);font-size:9.5px;text-align:right}
+.bks{grid-column:1/3;font-family:var(--ff-ui);font-size:10.5px;font-weight:600;color:var(--ink-3);letter-spacing:.06em;margin-top:4px}
+.bks:first-child{margin-top:0}
 .bk .b0{background:color-mix(in oklab,var(--side) 14%,var(--surface-3))}
 .bk .b1{background:color-mix(in oklab,var(--side) 28%,var(--surface-3))}
 .bk .b2{background:color-mix(in oklab,var(--side) 43%,var(--surface-3))}
