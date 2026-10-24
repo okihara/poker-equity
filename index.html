@@ -1679,7 +1679,7 @@ const FSF=[['suits','スーツ',['レインボー','ツートーン','モノト�
   ['conn','コネクト',['非コネクト','OESDあり','コネクト']],
   ...[['hi','最も高いカード'],['mid','中間のカード'],['lo','最も低いカード']].map(([k,t])=>[k,t,[...RANKS].reverse(),[...RANKS].map((x,i)=>12-i)])];
 const fsSel={suits:-1,pair:-1,conn:-1,hi:-1,mid:-1,lo:-1};
-let fsRes=null,fsSig='',fsW=null,fsId=0;
+let fsRes=null,fsSig='',fsW=null,fsId=0,fsJob=null; // fsJob: the latest run's {done,prog}
 /* what the result depends on: the mode and the ranges in play */
 const fsRanges=()=>mode==='multi'?ranges:ranges.slice(0,2);
 const fsSigNow=()=>mode+'|'+fsRanges().map(w=>rangeText(w)+'/'+[...w.cut].join(',')).join('|');
@@ -1703,8 +1703,11 @@ function runFlopSet(){
   const done=r=>{if(id!==fsId||r.stale)return;$('fsProg').classList.remove('on');$('fsRun').textContent='全フロップを計算';
     r.names=mode==='multi'?PN:['ヒーロー','相手'];fsRes=r;fsSig=sig;fsState();drawFlopSet();};
   const prog=p=>{if(id===fsId)$('fsProgi').style.width=(p*100).toFixed(0)+'%';};
+  /* The worker outlives runs, so its handler goes through fsJob: bound to the
+     first run's done and prog, it dropped every later run's answer as stale. */
+  fsJob={done,prog};
   if(!fsW)try{fsW=new Worker(URL.createObjectURL(new Blob([$('engine').textContent],{type:'text/javascript'})));
-    fsW.onmessage=e=>{const m=e.data;if(m.id!==fsId)return;if(m.result)done(m.result);else prog(m.progress);};
+    fsW.onmessage=e=>{const m=e.data;if(m.id!==fsId)return;if(m.result)fsJob.done(m.result);else fsJob.prog(m.progress);};
     fsW.onerror=()=>{fsW=null;};}catch(err){fsW=null;}
   if(fsW)fsW.postMessage({id,flopset:rs,opts:{}});
   else computeFlopSet(rs,{onProgress:prog,isStale:()=>id!==fsId}).then(done);
