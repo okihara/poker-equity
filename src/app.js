@@ -348,7 +348,9 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
-  for(const P of RP)P.el.querySelector('.callCut').disabled=live(board).length<3;
+  /* on the river no draw is left to call with, so only made hands stay */
+  for(const P of RP){const b=P.el.querySelector('.callCut'),n=live(board).length;b.disabled=n<3;
+    b.title=n>=5?'リバーなのでドローは残さず、自分のカードで1ペア以上のメイドハンドだけを残します':'ボードに対して、自分のカードで1ペア以上か、バックドア以外のドローがあるコンボだけを残します';}
   const faces=a=>a.map(c=>'<span class="'+faceCls(c).trim()+'">'+face(c)+'</span>').join(''),B=live(board),H=mode==='hand'?live(hero):[];
   $('stickHero').innerHTML=faces(H);$('stickHero').hidden=!H.length;
   $('stickBoard').innerHTML=B.length?faces(B):'<span class="stickpf">プリフロップ</span>';

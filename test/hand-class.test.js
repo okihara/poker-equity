@@ -81,4 +81,7 @@ test('what can call: a pair of its own or a real draw', () => {
   assert.strictEqual(call('KcQc', 'Ks 9h 4d'), true, 'top pair');
   assert.strictEqual(call('AhJh', 'Ks 9h 4d'), false, 'a backdoor alone does not call');
   assert.strictEqual(call('Qh2h', 'Ks 9h 4h 3c 7d'), false, 'no draws on the river');
+  assert.strictEqual(call('5c4c', 'Ks 8h 7d 2c Jh'), false, 'a missed gutshot on the river');
+  assert.strictEqual(call('Th9c', 'Ks 8h 7d 2c Jh'), true, 'a made straight on the river');
+  assert.strictEqual(call('3s3c', 'Ks 9h 4d 2c Jh'), true, 'a pair still calls on the river');
 });

@@ -609,7 +609,7 @@ th:first-child,td:first-child{text-align:left}
       <li>テキストは <code>AA,KK,AKs,AQo:0.5</code> の形式で入出力できます（<code>:</code> の後ろがウェイト）。</li>
       <li>スライダーの下のプルダウンで、プリセット（MTT 100bb chipEV のオープン頻度：UTG 16.5% 〜 SB 88%）や保存したレンジを選ぶと、そのレンジになります。</li>
       <li>「保存」で今のレンジに名前を付けて保存できます（絞り込みも含む。同じ名前なら上書き）。保存したレンジはどのプレイヤーのパネルからも選べ、選んでいる間は「削除」で消せます。公開したサイトでは端末間で同期します。</li>
-      <li>「コールできるハンドに絞る」は、ボードが3枚以上のとき、自分のカードで1ペア以上（ボードだけのペアは数えない）か、バックドア以外のドローがあるコンボだけを残します。スートごとに残すので、たとえば AKs はフラッシュドローの1コンボだけ残ることがあり、マスの塗りの高さが残った割合になります。マスを塗り直すかプリセット・テキストを適用すると絞り込みは外れます。絞り込み中のレンジのテキストは絞り込み前のものです。</li>
+      <li>「コールできるハンドに絞る」は、ボードが3枚以上のとき、自分のカードで1ペア以上（ボードだけのペアは数えない）か、バックドア以外のドローがあるコンボだけを残します。リバー（ボード5枚）ではドローは残らず、メイドハンドだけになります。スートごとに残すので、たとえば AKs はフラッシュドローの1コンボだけ残ることがあり、マスの塗りの高さが残った割合になります。マスを塗り直すかプリセット・テキストを適用すると絞り込みは外れます。絞り込み中のレンジのテキストは絞り込み前のものです。</li>
     </ul>
     <h3>スポット</h3>
     <ul>
@@ -1440,7 +1440,9 @@ function render(){
   const on=(k,i)=>!!activeSlot&&activeSlot.kind===k&&activeSlot.i===i;
   for(let i=0;i<2;i++)paintSlot(heroSlots.children[i],hero[i],on('hero',i));
   for(let i=0;i<5;i++)paintSlot(boardSlots.children[i],board[i],on('board',i));
-  for(const P of RP)P.el.querySelector('.callCut').disabled=live(board).length<3;
+  /* on the river no draw is left to call with, so only made hands stay */
+  for(const P of RP){const b=P.el.querySelector('.callCut'),n=live(board).length;b.disabled=n<3;
+    b.title=n>=5?'リバーなのでドローは残さず、自分のカードで1ペア以上のメイドハンドだけを残します':'ボードに対して、自分のカードで1ペア以上か、バックドア以外のドローがあるコンボだけを残します';}
   const faces=a=>a.map(c=>'<span class="'+faceCls(c).trim()+'">'+face(c)+'</span>').join(''),B=live(board),H=mode==='hand'?live(hero):[];
   $('stickHero').innerHTML=faces(H);$('stickHero').hidden=!H.length;
   $('stickBoard').innerHTML=B.length?faces(B):'<span class="stickpf">プリフロップ</span>';
